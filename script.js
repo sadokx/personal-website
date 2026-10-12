@@ -1,15 +1,18 @@
 (function () {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var root = document.documentElement;
+  var reveal = function () { root.classList.add('ready'); };
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return reveal();
 
   var GLYPHS = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ0123456789';
-  var DURATION = 650;
-  var MAX_DELAY = 1400;
-  var FLICKER = 60;
+  var SETTLE_MIN = 500;    // earliest a character can lock in (ms)
+  var SETTLE_SPAN = 1500;  // random spread added on top
+  var FLICKER = 50;        // how often unrevealed characters change (ms)
+  var WORD_RE = /[\p{L}\p{N}]/u;
 
-  var words = [];
   var targets = document.querySelectorAll('.decode');
+  var words = [];
 
-  // Pass 1: wrap every word in a span.
+  // Wrap every word in a span so it can be frozen at its real width.
   targets.forEach(function (el) {
     var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
     var nodes = [];
@@ -19,63 +22,62 @@
       var frag = document.createDocumentFragment();
       node.nodeValue.split(/(\s+)/).forEach(function (part) {
         if (!part) return;
-        if (/^\s+$/.test(part)) {
-          frag.appendChild(document.createTextNode(part));
-        } else {
-          var span = document.createElement('span');
-          span.className = 'w';
-          span.textContent = part;
-          frag.appendChild(span);
-          words.push({ el: span, text: part });
-        }
+        if (/^\s+$/.test(part)) return frag.appendChild(document.createTextNode(part));
+        var span = document.createElement('span');
+        span.className = 'w';
+        span.textContent = part;
+        frag.appendChild(span);
+        words.push({ el: span, text: part });
       });
       node.parentNode.replaceChild(frag, node);
     });
   });
-  if (!words.length) return;
+  if (!words.length) return reveal();
 
-  // Pass 2: freeze each word at its real width so scrambled glyphs never reflow the page.
+  // Measure first, then write, so layout never shifts while glyphs change.
   words.forEach(function (w) { w.width = w.el.getBoundingClientRect().width; });
-  var count = words.length;
-  var step = Math.min(8, MAX_DELAY / count);
-  var start = performance.now() + 150;
-  words.forEach(function (w, i) {
+  words.forEach(function (w) {
     w.el.style.width = w.width + 'px';
-    w.start = start + i * step;
-    w.last = 0;
+    w.settle = [];
+    for (var i = 0; i < w.text.length; i++) w.settle.push(SETTLE_MIN + Math.random() * SETTLE_SPAN);
+    w.max = Math.max.apply(null, w.settle);
     w.el.classList.add('scrambling');
-    w.el.textContent = scramble(w.text, 0);
   });
+  render(0);
+  reveal();
 
-  function rand() { return GLYPHS.charAt(Math.floor(Math.random() * GLYPHS.length)); }
-  function scramble(text, revealed) {
-    var out = text.slice(0, revealed);
-    for (var i = revealed; i < text.length; i++) out += /[\p{L}\p{N}]/u.test(text[i]) ? rand() : text[i];
-    return out;
-  }
+  function glyph() { return GLYPHS.charAt(Math.floor(Math.random() * GLYPHS.length)); }
 
-  var done = 0;
-  function frame(now) {
-    for (var i = 0; i < words.length; i++) {
-      var w = words[i];
-      if (w.finished) continue;
-      var p = (now - w.start) / DURATION;
-      if (p < 0) continue;
-      if (p >= 1) {
+  function render(elapsed) {
+    var pending = 0;
+    words.forEach(function (w) {
+      if (w.finished) return;
+      if (elapsed >= w.max) {
         w.el.textContent = w.text;
         w.el.classList.remove('scrambling');
-        w.el.style.width = '';
         w.finished = true;
-        done++;
-        continue;
+        return;
       }
-      if (now - w.last >= FLICKER) {
-        w.last = now;
-        w.el.textContent = scramble(w.text, Math.floor(p * w.text.length));
+      pending++;
+      var out = '';
+      for (var i = 0; i < w.text.length; i++) {
+        var ch = w.text[i];
+        out += elapsed >= w.settle[i] || !WORD_RE.test(ch) ? ch : glyph();
       }
+      w.el.textContent = out;
+    });
+    return pending;
+  }
+
+  var t0 = performance.now();
+  var last = 0;
+  function frame(now) {
+    var elapsed = now - t0;
+    if (elapsed - last >= FLICKER) {
+      last = elapsed;
+      if (!render(elapsed)) return cleanup();
     }
-    if (done < words.length) requestAnimationFrame(frame);
-    else cleanup();
+    requestAnimationFrame(frame);
   }
 
   // Unwrap the spans so the DOM ends up as plain text again.

@@ -56,17 +56,22 @@ footer p { margin: 0; }
 .photo {
   width: 96px; height: 96px; flex: none;
   border-radius: 22px; object-fit: cover; object-position: 50% 30%;
-  animation: rise 0.8s ease both;
 }
 h1 { font-size: clamp(2rem, 5.5vw, 3rem); line-height: 1.1; margin: 0; letter-spacing: -0.03em; color: var(--fg); font-weight: 700; }
 .role { color: var(--muted); font-size: 1.2rem; margin: 6px 0 0; }
 h2 { font-size: 1.5rem; margin: 0 0 24px; letter-spacing: -0.02em; color: var(--fg); font-weight: 700; }
 .side section + section { margin-top: 48px; }
 .side h2 { font-size: 1.35rem; margin-bottom: 14px; }
-.side p { margin: 0 0 14px; }
+
 .muted { color: var(--muted); }
 
-article { margin-bottom: 36px; }
+article { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 0 18px; margin-bottom: 36px; }
+.logo { width: 44px; height: 44px; border-radius: 10px; object-fit: contain; background: #fff; }
+.logo-generic { background: none; }
+.award { margin-bottom: 20px; }
+.award img { display: block; height: 40px; width: auto; border-radius: 6px; background: #fff; margin-bottom: 8px; }
+.award p { margin: 0; }
+.js:not(.ready) .decode { visibility: hidden; }
 article:last-child { margin-bottom: 0; }
 h3 { font-size: 1rem; margin: 0; font-weight: 600; color: var(--fg); }
 h3 span { font-weight: 600; }
@@ -81,8 +86,6 @@ ul.plain li { margin-bottom: 6px; overflow-wrap: anywhere; }
 .w { display: inline-block; overflow: hidden; vertical-align: bottom; white-space: nowrap; }
 .w.scrambling { color: var(--glyph); }
 
-@keyframes rise { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .photo { animation: none; } }
 
 @media (max-width: 860px) {
   .page {
@@ -93,6 +96,8 @@ ul.plain li { margin-bottom: 6px; overflow-wrap: anywhere; }
   .side { border-left: 0; padding-left: 0; margin-top: 48px; border-top: 1px solid var(--line); padding-top: 40px; }
 }
 @media (max-width: 420px) {
+  article { grid-template-columns: 36px minmax(0, 1fr); gap: 0 14px; }
+  .logo { width: 36px; height: 36px; border-radius: 8px; }
   .top { gap: 16px; }
   .photo { width: 72px; height: 72px; border-radius: 18px; }
 }
