@@ -52,7 +52,7 @@ em { font-style: italic; }
 .intro { grid-area: intro; margin: 36px 0 0; font-size: 1rem; }
 .experience { grid-area: exp; margin-top: 56px; }
 .side { grid-area: side; border-left: 1px solid var(--line); padding-left: 40px; }
-footer { grid-area: foot; margin-top: 56px; margin-bottom: 64px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
+footer { grid-area: foot; margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
 footer p { margin: 0; }
 
 .photo {
@@ -73,7 +73,6 @@ article { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 0 18px
 .award { margin-bottom: 20px; }
 .award img { display: block; height: 40px; width: auto; border-radius: 6px; background: #fff; margin-bottom: 8px; }
 .award p { margin: 0; }
-.js:not(.ready) .decode { visibility: hidden; }
 article:last-child { margin-bottom: 0; }
 h3 { font-size: 1rem; margin: 0; font-weight: 600; color: var(--fg); }
 h3 span { font-weight: 600; }
@@ -83,42 +82,6 @@ article ul { margin: 6px 0 0; padding-left: 20px; }
 article li { margin-bottom: 4px; }
 ul.plain { list-style: none; padding: 0; margin: 0; }
 ul.plain li { margin-bottom: 6px; overflow-wrap: anywhere; }
-
-/* Decode animation */
-.w { display: inline-block; overflow: hidden; vertical-align: bottom; white-space: nowrap; }
-.w.scrambling { color: var(--glyph); }
-.w.sweep {
-  color: color-mix(in srgb, var(--glow) calc(var(--g, 0) * 100%), var(--body));
-  text-shadow: 0 0 calc(var(--g, 0) * 10px) var(--glow);
-}
-.w.pixel { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: -0.05em; }
-.w.caret { color: var(--fg); }
-.w.pixel, .w.caret { overflow: hidden; }
-
-/* Temporary animation picker */
-.anim-picker {
-  position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%);
-  z-index: 10; display: flex; align-items: center; gap: 10px;
-  max-width: calc(100vw - 24px);
-  padding: 8px 10px 8px 16px;
-  background: var(--bg); color: var(--fg);
-  border: 1px solid var(--line); border-radius: 999px;
-  box-shadow: 0 8px 30px rgba(15, 27, 61, 0.14);
-  font-size: 0.8rem;
-}
-.anim-label { color: var(--muted); font-weight: 500; white-space: nowrap; }
-.anim-buttons { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
-.anim-buttons::-webkit-scrollbar { display: none; }
-.anim-picker button {
-  font: inherit; font-weight: 500; color: var(--body); background: none;
-  border: 0; border-radius: 999px; padding: 6px 12px; cursor: pointer; white-space: nowrap;
-}
-.anim-picker button:hover { background: var(--line); }
-.anim-picker button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
-.anim-picker button:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
-.anim-replay { font-size: 1rem !important; line-height: 1; padding: 6px 10px !important; }
-@media (max-width: 520px) { .anim-label { display: none; } .anim-picker { padding-left: 10px; } }
-
 
 @media (max-width: 860px) {
   .page {
@@ -134,3 +97,8 @@ ul.plain li { margin-bottom: 6px; overflow-wrap: anywhere; }
   .top { gap: 16px; }
   .photo { width: 72px; height: 72px; border-radius: 18px; }
 }
+
+/* Stage for the ASCII sweep intro. The page scrolls inside it. */
+.js:not(.ready) .page { visibility: hidden; }
+html.stage-on, html.stage-on body { height: 100%; overflow: hidden; }
+.stage { position: fixed; inset: 0; }
