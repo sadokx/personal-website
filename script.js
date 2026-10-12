@@ -19,6 +19,46 @@
   // Each mode: interval (ms between renders), setup(word, ctx) to create per-char timing,
   // draw(word, elapsed) to paint, and a class added to each word span while running.
   var MODES = {
+    sweep: {
+      interval: 40, cls: 'sweep', duration: 2600, band: 0.24, trail: 0.3, angle: 18,
+      ramp: ' .:-=+*#%@',
+      setup: function (w) {
+        var m = MODES.sweep, a = m.angle * Math.PI / 180;
+        var vw = window.innerWidth, vh = window.innerHeight;
+        var r = w.el.getBoundingClientRect();
+        // Words outside the first screen skip the effect so the sweep stays quick.
+        if (r.bottom < 0 || r.top > vh) { w.u = -9; w.max = 0; return; }
+        var p = (r.left + r.width / 2) * Math.cos(a) + (r.top + r.height / 2) * Math.sin(a);
+        w.u = Math.min(1, Math.max(0, p / (vw * Math.cos(a) + vh * Math.sin(a))));
+        w.rs = w.text.split('').map(function () { return between(0.05, 0.55); });
+        w.max = (w.u + m.band + m.trail) / (1 + m.band + m.trail) * m.duration;
+      },
+      draw: function (w, t) {
+        var m = MODES.sweep, ramp = m.ramp, n = ramp.length;
+        var lead = t / m.duration * (1 + m.band + m.trail), tail = lead - m.band;
+        var out = '', glyphs = false, g = 1;
+        if (w.u > lead) {
+          out = w.text.replace(/./g, '\u00a0');
+          g = 0;
+        } else if (w.u < tail) {
+          out = w.text;
+          g = Math.max(0, 1 - (tail - w.u) / m.trail);
+        } else {
+          var q = (w.u - tail) / m.band; // 0 at the trailing edge, 1 at the leading edge
+          for (var i = 0; i < w.text.length; i++) {
+            var ch = w.text[i];
+            if (q <= w.rs[i]) { out += ch; continue; }
+            glyphs = true;
+            if (q > 0.8 && Math.random() < (q - 0.8) * 3) { out += '\u00a0'; continue; }
+            var level = Math.pow(1 - Math.abs(q - 0.55) * 1.8, 0.8) * (0.55 + 0.45 * Math.random());
+            out += ramp.charAt(Math.max(1, Math.min(n - 1, Math.round(level * (n - 1)))));
+          }
+        }
+        w.el.textContent = out;
+        w.el.style.setProperty('--g', g.toFixed(2));
+        w.el.classList.toggle('pixel', glyphs);
+      }
+    },
     matrix: {
       interval: 50, cls: 'scrambling',
       setup: function (w) {
@@ -102,8 +142,8 @@
 
   var words = [];
   var raf = 0;
-  var current = 'matrix';
-  try { var saved = localStorage.getItem('anim'); if (saved && MODES[saved]) current = saved; } catch (e) {}
+  var current = 'sweep';
+  try { var saved = localStorage.getItem('anim2'); if (saved && MODES[saved]) current = saved; } catch (e) {}
 
   function stop() {
     cancelAnimationFrame(raf);
@@ -195,7 +235,7 @@
   function select(name, replay) {
     current = name;
     buttons.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.mode === name)); });
-    try { localStorage.setItem('anim', name); } catch (e) {}
+    try { localStorage.setItem('anim2', name); } catch (e) {}
     if (replay) play(name);
   }
 

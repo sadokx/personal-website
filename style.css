@@ -5,6 +5,7 @@
   --muted: #7a819b;
   --line: #e4e6ee;
   --glyph: #8a93b5;
+  --glow: #2f5bff;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -14,6 +15,7 @@
     --muted: #8d94b0;
     --line: #232944;
     --glyph: #5f6a99;
+    --glow: #7aa2ff;
   }
 }
 * { box-sizing: border-box; }
@@ -85,6 +87,10 @@ ul.plain li { margin-bottom: 6px; overflow-wrap: anywhere; }
 /* Decode animation */
 .w { display: inline-block; overflow: hidden; vertical-align: bottom; white-space: nowrap; }
 .w.scrambling { color: var(--glyph); }
+.w.sweep {
+  color: color-mix(in srgb, var(--glow) calc(var(--g, 0) * 100%), var(--body));
+  text-shadow: 0 0 calc(var(--g, 0) * 10px) var(--glow);
+}
 .w.pixel { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: -0.05em; }
 .w.caret { color: var(--fg); }
 .w.pixel, .w.caret { overflow: hidden; }
