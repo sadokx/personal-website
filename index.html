@@ -12,25 +12,27 @@
   <link rel="canonical" href="https://sadok.mx">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preload" as="image" href="assets/sadok.jpg">
   <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
 </head>
 <body>
-  <main>
-    <header>
-      <h1>Sadok Cervantes</h1>
-      <p class="role">Senior Product Designer</p>
-      <p class="intro">I'm a Senior Product Designer with 10+ years of experience in full product development, including branding, marketing, user research, UX, UI, and technical implementation. My work has impacted over 100M+ people and added over $50M USD in value. I'd love to do the same for you, and with you.</p>
-      <nav class="links" aria-label="Contact">
-        <a href="mailto:sadok.ycr@gmail.com">sadok.ycr@gmail.com</a>
-        <a href="https://linkedin.com/in/sadokx" rel="noopener">linkedin.com/in/sadokx</a>
-      </nav>
+  <main class="page">
+    <header class="top">
+      <img class="photo" src="assets/sadok.jpg" width="96" height="96" alt="Portrait of Sadok Cervantes">
+      <div>
+        <h1 class="decode">Sadok Cervantes</h1>
+        <p class="role decode">Senior Product Designer</p>
+      </div>
     </header>
 
-    <section aria-labelledby="exp">
-      <h2 id="exp">Experience</h2>
+    <p class="intro decode">I'm a Senior Product Designer with 10+ years of experience in full product development, including branding, marketing, user research, UX, UI, and technical implementation. My work has impacted over 100M+ people and added over $50M USD in value. I'd love to do the same for you, and with you.</p>
 
-      <article>
+    <section class="experience" aria-labelledby="exp">
+      <h2 id="exp" class="decode">Experience</h2>
+
+      <article class="decode">
         <h3>Senior Product Engineer <span>@ Consumer Social Platform (15M+ monthly users)</span></h3>
         <p class="dates">2024 - 2026</p>
         <p>Top-5 consumer social app globally. I built and launched the web side of the platform, including product launch webapps and in-app web experiences used by millions of people every month.</p>
@@ -42,7 +44,7 @@
         </ul>
       </article>
 
-      <article>
+      <article class="decode">
         <h3>Senior UX Designer <span>@ Wikipedia</span></h3>
         <p class="dates">2019 - 2023</p>
         <p>Have you ever seen those banners on top of the articles that say <em>"Please donate $2 to Wikipedia or we die"</em>? I made those.</p>
@@ -55,7 +57,7 @@
         </ul>
       </article>
 
-      <article>
+      <article class="decode">
         <h3>Lead Designer <span>@ Medal.tv</span></h3>
         <p class="dates">2017 - 2020</p>
         <p>Medal is the easiest way to create, watch, share, and analyze gaming highlights, the next generation of gaming entertainment.</p>
@@ -67,7 +69,7 @@
         </ul>
       </article>
 
-      <article>
+      <article class="decode">
         <h3>Product Designer (Contractor) <span>@ Multiple companies</span></h3>
         <p class="dates">Since 2012</p>
         <p>If you've used the internet, chances are you've seen or used something that I've worked on.</p>
@@ -78,7 +80,7 @@
         </ul>
       </article>
 
-      <article>
+      <article class="decode">
         <h3>Managing Director <span>@ Leangap</span></h3>
         <p class="dates">2015 - Current</p>
         <p>One of the two biggest entrepreneurship programs for teenagers in the world. If the other program is Coca-Cola, we are Pepsi.</p>
@@ -90,14 +92,29 @@
       </article>
     </section>
 
-    <div class="grid">
+    <aside class="side">
+      <section aria-labelledby="details">
+        <h2 id="details" class="decode">Details</h2>
+        <ul class="plain">
+          <li><a href="mailto:sadok.ycr@gmail.com">sadok.ycr@gmail.com</a></li>
+          <li><a href="https://linkedin.com/in/sadokx" rel="noopener">linkedin.com/in/sadokx</a></li>
+        </ul>
+      </section>
       <section aria-labelledby="awards">
-        <h2 id="awards">Awards</h2>
+        <h2 id="awards" class="decode">Awards</h2>
         <p><strong>"Most Innovative People"</strong><br><span class="muted">FastCompany Magazine</span></p>
         <p><strong>Best Mobile Innovation</strong><br><span class="muted">Mobile World Congress</span></p>
       </section>
+      <section aria-labelledby="lang">
+        <h2 id="lang" class="decode">Languages</h2>
+        <ul class="plain">
+          <li>English <span class="muted">Fluent</span></li>
+          <li>Spanish <span class="muted">Fluent</span></li>
+          <li>French <span class="muted">Basic</span></li>
+        </ul>
+      </section>
       <section aria-labelledby="skills">
-        <h2 id="skills">Main skills</h2>
+        <h2 id="skills" class="decode">Main skills</h2>
         <ul class="plain">
           <li>Team leadership</li>
           <li>Outcome-oriented</li>
@@ -108,15 +125,7 @@
           <li>Client pitching</li>
         </ul>
       </section>
-      <section aria-labelledby="lang">
-        <h2 id="lang">Languages</h2>
-        <ul class="plain">
-          <li>English <span class="muted">Fluent</span></li>
-          <li>Spanish <span class="muted">Fluent</span></li>
-          <li>French <span class="muted">Basic</span></li>
-        </ul>
-      </section>
-    </div>
+    </aside>
 
     <footer>
       <p>A full website is on the way.</p>
