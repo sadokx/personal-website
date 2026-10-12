@@ -1,4 +1,5 @@
-import { createAsciiSweep, supportsHtmlInCanvas } from './vendor/ascii-sweep.js';
+(function () {
+const { createAsciiSweep, supportsHtmlInCanvas } = window.CanvasUIAsciiSweep;
 
 const root = document.documentElement;
 const page = document.querySelector('.page');
@@ -70,3 +71,4 @@ start().catch((error) => {
   console.warn('Intro animation failed, showing the page directly.', error);
   reveal();
 });
+})();

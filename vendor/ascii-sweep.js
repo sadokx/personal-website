@@ -2,129 +2,153 @@
  * AsciiSweep, from Canvas UI (https://canvasui.dev/docs/components/ascii-sweep)
  * Copyright (c) 2026 David Haz. MIT + Commons Clause, see LICENSE-canvas-ui.md.
  * Only modification: the React wrapper was removed and the TypeScript types were
- * stripped so the engine loads as a plain ES module.
+ * stripped so the engine loads as a plain script.
  */
-const canvasDimensionLimits = /* @__PURE__ */ new WeakMap();
-function getCanvasPixelRatio(element, context) {
-  const scale = window.visualViewport?.scale || 1;
-  const requested = Math.min(window.devicePixelRatio || 1, 2) * scale;
-  const width = Math.max(element.clientWidth, 1);
-  const height = Math.max(element.clientHeight, 1);
-  let maxDimension = 8192;
-  if (context) {
-    let limit = canvasDimensionLimits.get(context);
-    if (limit === void 0) {
-      limit = Math.min(
-        maxDimension,
-        context.getParameter(context.MAX_TEXTURE_SIZE),
-        context.getParameter(context.MAX_RENDERBUFFER_SIZE)
-      );
-      canvasDimensionLimits.set(context, limit);
-    }
-    maxDimension = limit;
-  }
-  return Math.min(
-    requested,
-    maxDimension / Math.max(width, height),
-    Math.sqrt(16777216 / (width * height))
-  );
-}
-function createCanvasResizeObserver(onResize) {
-  const viewport = window.visualViewport;
-  let frame = 0;
-  let disconnected = false;
-  const schedule = () => {
-    if (frame || disconnected) return;
-    frame = requestAnimationFrame(() => {
-      frame = 0;
-      onResize();
-    });
+/* Plain script build: exposes window.CanvasUIAsciiSweep so the page also works when opened from disk (file://), where ES modules are blocked. */
+var CanvasUIAsciiSweep = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
   };
-  const observer = new ResizeObserver(schedule);
-  window.addEventListener("resize", schedule, { passive: true });
-  viewport?.addEventListener("resize", schedule, { passive: true });
-  return {
-    observe(element, options) {
-      observer.observe(element, options);
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+  var core_exports = {};
+  __export(core_exports, {
+    createAsciiSweep: () => createAsciiSweep,
+    supportsHtmlInCanvas: () => supportsHtmlInCanvas
+  });
+  const canvasDimensionLimits = /* @__PURE__ */ new WeakMap();
+  function getCanvasPixelRatio(element, context) {
+    const scale = window.visualViewport?.scale || 1;
+    const requested = Math.min(window.devicePixelRatio || 1, 2) * scale;
+    const width = Math.max(element.clientWidth, 1);
+    const height = Math.max(element.clientHeight, 1);
+    let maxDimension = 8192;
+    if (context) {
+      let limit = canvasDimensionLimits.get(context);
+      if (limit === void 0) {
+        limit = Math.min(
+          maxDimension,
+          context.getParameter(context.MAX_TEXTURE_SIZE),
+          context.getParameter(context.MAX_RENDERBUFFER_SIZE)
+        );
+        canvasDimensionLimits.set(context, limit);
+      }
+      maxDimension = limit;
+    }
+    return Math.min(
+      requested,
+      maxDimension / Math.max(width, height),
+      Math.sqrt(16777216 / (width * height))
+    );
+  }
+  function createCanvasResizeObserver(onResize) {
+    const viewport = window.visualViewport;
+    let frame = 0;
+    let disconnected = false;
+    const schedule = () => {
+      if (frame || disconnected) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        onResize();
+      });
+    };
+    const observer = new ResizeObserver(schedule);
+    window.addEventListener("resize", schedule, { passive: true });
+    viewport?.addEventListener("resize", schedule, { passive: true });
+    return {
+      observe(element, options) {
+        observer.observe(element, options);
+      },
+      unobserve(element) {
+        observer.unobserve(element);
+      },
+      disconnect() {
+        disconnected = true;
+        observer.disconnect();
+        cancelAnimationFrame(frame);
+        window.removeEventListener("resize", schedule);
+        viewport?.removeEventListener("resize", schedule);
+      }
+    };
+  }
+  function prepareHtmlInCanvas(source, content) {
+    if ("content" in source) {
+      source.setAttribute("content", "drawable");
+      content.setAttribute("drawable", "");
+    } else {
+      source.setAttribute("layoutsubtree", "");
+    }
+  }
+  function drawHtmlInCanvas(source, context, content) {
+    const transform = context.drawElementImage(content, 0, 0);
+    const canvas = source;
+    if (transform && typeof canvas.updateElementGeometry === "function") {
+      canvas.updateElementGeometry(content, { canvasTransform: transform });
+    }
+  }
+  const CHARSETS = {
+    ascii: [
+      0,
+      128,
+      131200,
+      14336,
+      459200,
+      469440,
+      4357252,
+      18157905,
+      11512810,
+      15724526
+    ],
+    blocks: [0, 328e3, 22041621, 22369621, 11512810, 33554431],
+    binary: [0, 4591758, 15324974]
+  };
+  const FADE_OUT_S = 0.45;
+  const MAX_GLYPHS = 16;
+  const FALLBACK_CAPTURE_DELAY = 500;
+  const DEFAULTS = {
+    angle: 0,
+    duration: 2,
+    band: 0.28,
+    softness: 0.45,
+    turbulence: 0.5,
+    trail: 0.75,
+    progress: -1,
+    scale: 2,
+    spacing: 1,
+    charset: "ascii",
+    glyphs: [],
+    color: "#4ade80",
+    tint: 0.75,
+    glow: 2,
+    aberration: 5,
+    flicker: 0.35,
+    density: 0.9,
+    displace: 14,
+    contrast: 1.2,
+    brightness: 0,
+    invert: 0,
+    threshold: 0.1,
+    fade: 0.75,
+    blend: "auto",
+    background: "auto",
+    onSweepStart: () => {
     },
-    unobserve(element) {
-      observer.unobserve(element);
-    },
-    disconnect() {
-      disconnected = true;
-      observer.disconnect();
-      cancelAnimationFrame(frame);
-      window.removeEventListener("resize", schedule);
-      viewport?.removeEventListener("resize", schedule);
+    onSweepEnd: () => {
     }
   };
-}
-function prepareHtmlInCanvas(source, content) {
-  if ("content" in source) {
-    source.setAttribute("content", "drawable");
-    content.setAttribute("drawable", "");
-  } else {
-    source.setAttribute("layoutsubtree", "");
-  }
-}
-function drawHtmlInCanvas(source, context, content) {
-  const transform = context.drawElementImage(content, 0, 0);
-  const canvas = source;
-  if (transform && typeof canvas.updateElementGeometry === "function") {
-    canvas.updateElementGeometry(content, { canvasTransform: transform });
-  }
-}
-const CHARSETS = {
-  ascii: [
-    0,
-    128,
-    131200,
-    14336,
-    459200,
-    469440,
-    4357252,
-    18157905,
-    11512810,
-    15724526
-  ],
-  blocks: [0, 328e3, 22041621, 22369621, 11512810, 33554431],
-  binary: [0, 4591758, 15324974]
-};
-const FADE_OUT_S = 0.45;
-const MAX_GLYPHS = 16;
-const FALLBACK_CAPTURE_DELAY = 500;
-const DEFAULTS = {
-  angle: 0,
-  duration: 2,
-  band: 0.28,
-  softness: 0.45,
-  turbulence: 0.5,
-  trail: 0.75,
-  progress: -1,
-  scale: 2,
-  spacing: 1,
-  charset: "ascii",
-  glyphs: [],
-  color: "#4ade80",
-  tint: 0.75,
-  glow: 2,
-  aberration: 5,
-  flicker: 0.35,
-  density: 0.9,
-  displace: 14,
-  contrast: 1.2,
-  brightness: 0,
-  invert: 0,
-  threshold: 0.1,
-  fade: 0.75,
-  blend: "auto",
-  background: "auto",
-  onSweepStart: () => {
-  },
-  onSweepEnd: () => {
-  }
-};
-const VERT = `#version 300 es
+  const VERT = `#version 300 es
 precision highp float;
 layout(location = 0) in vec2 aPos;
 out vec2 vUv;
@@ -132,7 +156,7 @@ void main () {
   vUv = aPos * 0.5 + 0.5;
   gl_Position = vec4(aPos, 0.0, 1.0);
 }`;
-const FRAG = `#version 300 es
+  const FRAG = `#version 300 es
 precision highp float;
 in vec2 vUv;
 out vec4 outColor;
@@ -382,943 +406,941 @@ void main () {
   alpha = clamp(alpha, 0.0, 1.0) * uActive;
   outColor = vec4(base * alpha, alpha);
 }`;
-function supportsHtmlInCanvas() {
-  if (typeof document === "undefined") return false;
-  const probe = document.createElement("canvas");
-  const ctx = probe.getContext("2d");
-  return Boolean(
-    ctx && typeof ctx.drawElementImage === "function" && typeof probe.requestPaint === "function"
-  );
-}
-function intersectFallbackRects(first, second) {
-  return {
-    left: Math.max(first.left, second.left),
-    top: Math.max(first.top, second.top),
-    right: Math.min(first.right, second.right),
-    bottom: Math.min(first.bottom, second.bottom)
-  };
-}
-function paintFallbackSnapshot(content, canvas, dpr) {
-  const rootRect = content.getBoundingClientRect();
-  const width = Math.max(1, Math.round(rootRect.width * dpr));
-  const height = Math.max(1, Math.round(rootRect.height * dpr));
-  if (canvas.width !== width || canvas.height !== height) {
-    canvas.width = width;
-    canvas.height = height;
+  function supportsHtmlInCanvas() {
+    if (typeof document === "undefined") return false;
+    const probe = document.createElement("canvas");
+    const ctx = probe.getContext("2d");
+    return Boolean(
+      ctx && typeof ctx.drawElementImage === "function" && typeof probe.requestPaint === "function"
+    );
   }
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("2D canvas is unavailable");
-  ctx.resetTransform();
-  ctx.clearRect(0, 0, width, height);
-  ctx.scale(dpr, dpr);
-  const rootClip = {
-    left: rootRect.left,
-    top: rootRect.top,
-    right: rootRect.right,
-    bottom: rootRect.bottom
-  };
-  const states = /* @__PURE__ */ new WeakMap();
-  function resolveState(element) {
-    const cached = states.get(element);
-    if (cached) return cached;
-    const parent = element.parentElement;
-    const parentState = parent && content.contains(parent) ? resolveState(parent) : null;
-    const style = getComputedStyle(element);
-    const ownOpacity = Number.parseFloat(style.opacity);
-    const opacity = (parentState?.opacity ?? 1) * (Number.isFinite(ownOpacity) ? ownOpacity : 1);
-    const visible = (parentState?.visible ?? true) && style.display !== "none" && style.visibility !== "hidden" && style.visibility !== "collapse" && opacity > 0;
-    const clip = parentState?.childrenClip ?? rootClip;
-    const rect = element.getBoundingClientRect();
-    const childrenClip = { ...clip };
-    if (style.overflowX !== "visible") {
-      childrenClip.left = Math.max(childrenClip.left, rect.left);
-      childrenClip.right = Math.min(childrenClip.right, rect.right);
-    }
-    if (style.overflowY !== "visible") {
-      childrenClip.top = Math.max(childrenClip.top, rect.top);
-      childrenClip.bottom = Math.min(childrenClip.bottom, rect.bottom);
-    }
-    const state = { style, visible, opacity, clip, childrenClip };
-    states.set(element, state);
-    return state;
+  function intersectFallbackRects(first, second) {
+    return {
+      left: Math.max(first.left, second.left),
+      top: Math.max(first.top, second.top),
+      right: Math.min(first.right, second.right),
+      bottom: Math.min(first.bottom, second.bottom)
+    };
   }
-  const walker = document.createTreeWalker(content, NodeFilter.SHOW_ELEMENT);
-  let current = walker.currentNode;
-  while (current) {
-    const element = current;
-    const rect = element.getBoundingClientRect();
-    const state = resolveState(element);
-    const visibleRect = intersectFallbackRects(rect, state.clip);
-    if (state.visible && visibleRect.right > visibleRect.left && visibleRect.bottom > visibleRect.top) {
-      const { style } = state;
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(
-        state.clip.left - rootRect.left,
-        state.clip.top - rootRect.top,
-        state.clip.right - state.clip.left,
-        state.clip.bottom - state.clip.top
-      );
-      ctx.clip();
-      ctx.globalAlpha = state.opacity;
-      const x = rect.left - rootRect.left;
-      const y = rect.top - rootRect.top;
-      if (style.backgroundColor !== "transparent") {
-        ctx.fillStyle = style.backgroundColor;
-        ctx.fillRect(x, y, rect.width, rect.height);
+  function paintFallbackSnapshot(content, canvas, dpr) {
+    const rootRect = content.getBoundingClientRect();
+    const width = Math.max(1, Math.round(rootRect.width * dpr));
+    const height = Math.max(1, Math.round(rootRect.height * dpr));
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("2D canvas is unavailable");
+    ctx.resetTransform();
+    ctx.clearRect(0, 0, width, height);
+    ctx.scale(dpr, dpr);
+    const rootClip = {
+      left: rootRect.left,
+      top: rootRect.top,
+      right: rootRect.right,
+      bottom: rootRect.bottom
+    };
+    const states = /* @__PURE__ */ new WeakMap();
+    function resolveState(element) {
+      const cached = states.get(element);
+      if (cached) return cached;
+      const parent = element.parentElement;
+      const parentState = parent && content.contains(parent) ? resolveState(parent) : null;
+      const style = getComputedStyle(element);
+      const ownOpacity = Number.parseFloat(style.opacity);
+      const opacity = (parentState?.opacity ?? 1) * (Number.isFinite(ownOpacity) ? ownOpacity : 1);
+      const visible = (parentState?.visible ?? true) && style.display !== "none" && style.visibility !== "hidden" && style.visibility !== "collapse" && opacity > 0;
+      const clip = parentState?.childrenClip ?? rootClip;
+      const rect = element.getBoundingClientRect();
+      const childrenClip = { ...clip };
+      if (style.overflowX !== "visible") {
+        childrenClip.left = Math.max(childrenClip.left, rect.left);
+        childrenClip.right = Math.min(childrenClip.right, rect.right);
       }
-      paintFallbackMedia(ctx, element, style, rect, rootRect);
-      paintFallbackText(ctx, element, style, rootRect);
-      paintFallbackBorders(ctx, style, rect, rootRect);
-      ctx.restore();
+      if (style.overflowY !== "visible") {
+        childrenClip.top = Math.max(childrenClip.top, rect.top);
+        childrenClip.bottom = Math.min(childrenClip.bottom, rect.bottom);
+      }
+      const state = { style, visible, opacity, clip, childrenClip };
+      states.set(element, state);
+      return state;
     }
-    current = walker.nextNode();
-  }
-  ctx.globalAlpha = 1;
-}
-function paintFallbackMedia(ctx, element, style, rect, rootRect) {
-  const drawable = element instanceof HTMLImageElement ? element.complete && element.naturalWidth > 0 ? element : null : element instanceof HTMLCanvasElement ? element : element instanceof HTMLVideoElement && element.readyState >= 2 ? element : null;
-  if (!drawable) return;
-  if (!isFallbackMediaOriginClean(drawable)) return;
-  const sourceWidth = drawable instanceof HTMLImageElement ? drawable.naturalWidth : drawable instanceof HTMLVideoElement ? drawable.videoWidth : drawable.width;
-  const sourceHeight = drawable instanceof HTMLImageElement ? drawable.naturalHeight : drawable instanceof HTMLVideoElement ? drawable.videoHeight : drawable.height;
-  if (!(sourceWidth > 0 && sourceHeight > 0)) return;
-  let sourceX = 0;
-  let sourceY = 0;
-  let cropWidth = sourceWidth;
-  let cropHeight = sourceHeight;
-  let targetX = rect.left - rootRect.left;
-  let targetY = rect.top - rootRect.top;
-  let targetWidth = rect.width;
-  let targetHeight = rect.height;
-  const [positionX, positionY] = resolveObjectPosition(style.objectPosition);
-  if (style.objectFit === "cover") {
-    const scale = Math.max(
-      rect.width / sourceWidth,
-      rect.height / sourceHeight
-    );
-    cropWidth = rect.width / scale;
-    cropHeight = rect.height / scale;
-    sourceX = (sourceWidth - cropWidth) * positionX;
-    sourceY = (sourceHeight - cropHeight) * positionY;
-  } else if (style.objectFit === "contain" || style.objectFit === "scale-down") {
-    const containScale = Math.min(
-      rect.width / sourceWidth,
-      rect.height / sourceHeight,
-      style.objectFit === "scale-down" ? 1 : Number.POSITIVE_INFINITY
-    );
-    targetWidth = sourceWidth * containScale;
-    targetHeight = sourceHeight * containScale;
-    targetX += (rect.width - targetWidth) * positionX;
-    targetY += (rect.height - targetHeight) * positionY;
-  }
-  try {
-    ctx.drawImage(
-      drawable,
-      sourceX,
-      sourceY,
-      cropWidth,
-      cropHeight,
-      targetX,
-      targetY,
-      targetWidth,
-      targetHeight
-    );
-  } catch {
-  }
-}
-function isFallbackMediaOriginClean(drawable) {
-  const probe = document.createElement("canvas");
-  probe.width = probe.height = 1;
-  const ctx = probe.getContext("2d", { willReadFrequently: true });
-  if (!ctx) return false;
-  try {
-    ctx.drawImage(drawable, 0, 0, 1, 1);
-    ctx.getImageData(0, 0, 1, 1);
-    return true;
-  } catch {
-    return false;
-  }
-}
-function resolveObjectPosition(position) {
-  const [x = "50%", y = "50%"] = position.split(/\s+/);
-  return [
-    resolvePositionValue(x, "left", "right"),
-    resolvePositionValue(y, "top", "bottom")
-  ];
-}
-function resolvePositionValue(value, start, end) {
-  if (value === start) return 0;
-  if (value === end) return 1;
-  if (value === "center") return 0.5;
-  if (value.endsWith("%")) {
-    return Math.min(1, Math.max(0, Number.parseFloat(value) / 100));
-  }
-  return 0.5;
-}
-function paintFallbackText(ctx, element, style, rootRect) {
-  const textNodes = Array.from(element.childNodes).filter(
-    (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim()
-  );
-  if (textNodes.length === 0) return;
-  ctx.fillStyle = style.color;
-  ctx.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-  ctx.textBaseline = "alphabetic";
-  if ("letterSpacing" in ctx) {
-    ctx.letterSpacing = style.letterSpacing === "normal" ? "0px" : style.letterSpacing;
-  }
-  const textAlign = style.textAlign === "center" || style.textAlign === "right" || style.textAlign === "start" || style.textAlign === "end" ? style.textAlign : "left";
-  const direction = style.direction === "rtl" ? "rtl" : "ltr";
-  ctx.textAlign = textAlign;
-  ctx.direction = direction;
-  const whiteSpace = style.whiteSpace;
-  const preservesNewlines = whiteSpace === "pre" || whiteSpace === "pre-wrap" || whiteSpace === "pre-line" || whiteSpace === "break-spaces";
-  const preservesSpaces = preservesNewlines && whiteSpace !== "pre-line";
-  const anchor = textAlign === "center" ? 0.5 : textAlign === "right" || textAlign === "end" && direction === "ltr" || textAlign === "start" && direction === "rtl" ? 1 : 0;
-  function transform(text) {
-    if (style.textTransform === "uppercase") return text.toUpperCase();
-    if (style.textTransform === "lowercase") return text.toLowerCase();
-    return text;
-  }
-  function drawAcrossRects(text, rects) {
-    const visible = rects.filter(
-      (rect) => rect.right > rootRect.left && rect.left < rootRect.right && rect.bottom > rootRect.top && rect.top < rootRect.bottom
-    );
-    if (visible.length === 0) return;
-    const totalWidth = visible.reduce((sum, rect) => sum + rect.width, 0);
-    let offset = 0;
-    for (let index = 0; index < visible.length; index++) {
-      const rect = visible[index];
-      const remaining = text.length - offset;
-      if (remaining <= 0) break;
-      const count = index === visible.length - 1 ? remaining : Math.min(
-        remaining,
-        Math.max(1, Math.round(text.length * rect.width / totalWidth))
-      );
-      const slice = text.slice(offset, offset + count);
-      offset += count;
-      const line = preservesSpaces ? slice : slice.trim();
-      if (!line.trim()) continue;
-      const x = rect.left - rootRect.left + rect.width * anchor;
-      const metrics = ctx.measureText(line);
-      const ascent = metrics.fontBoundingBoxAscent ?? 0;
-      const descent = metrics.fontBoundingBoxDescent ?? 0;
-      const y = ascent > 0 ? rect.top - rootRect.top + (rect.height - ascent - descent) / 2 + ascent : rect.bottom - rootRect.top - rect.height * 0.2;
-      ctx.fillText(line, x, y, Math.max(rect.width, 1));
-    }
-  }
-  for (const node of textNodes) {
-    const raw = node.textContent ?? "";
-    const range = document.createRange();
-    if (preservesNewlines) {
-      let position = 0;
-      for (const part of raw.split("\n")) {
-        const start = position;
-        position += part.length + 1;
-        if (!part.trim()) continue;
-        range.setStart(node, start);
-        range.setEnd(node, start + part.length);
-        const text2 = transform(
-          preservesSpaces ? part : part.replace(/\s+/g, " ").trim()
+    const walker = document.createTreeWalker(content, NodeFilter.SHOW_ELEMENT);
+    let current = walker.currentNode;
+    while (current) {
+      const element = current;
+      const rect = element.getBoundingClientRect();
+      const state = resolveState(element);
+      const visibleRect = intersectFallbackRects(rect, state.clip);
+      if (state.visible && visibleRect.right > visibleRect.left && visibleRect.bottom > visibleRect.top) {
+        const { style } = state;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(
+          state.clip.left - rootRect.left,
+          state.clip.top - rootRect.top,
+          state.clip.right - state.clip.left,
+          state.clip.bottom - state.clip.top
         );
-        drawAcrossRects(text2, Array.from(range.getClientRects()));
+        ctx.clip();
+        ctx.globalAlpha = state.opacity;
+        const x = rect.left - rootRect.left;
+        const y = rect.top - rootRect.top;
+        if (style.backgroundColor !== "transparent") {
+          ctx.fillStyle = style.backgroundColor;
+          ctx.fillRect(x, y, rect.width, rect.height);
+        }
+        paintFallbackMedia(ctx, element, style, rect, rootRect);
+        paintFallbackText(ctx, element, style, rootRect);
+        paintFallbackBorders(ctx, style, rect, rootRect);
+        ctx.restore();
       }
-      continue;
+      current = walker.nextNode();
     }
-    const text = transform(raw.replace(/\s+/g, " ").trim());
-    if (!text) continue;
-    range.selectNodeContents(node);
-    drawAcrossRects(text, Array.from(range.getClientRects()));
+    ctx.globalAlpha = 1;
   }
-}
-function paintFallbackBorders(ctx, style, rect, rootRect) {
-  const x = rect.left - rootRect.left;
-  const y = rect.top - rootRect.top;
-  const top = Number.parseFloat(style.borderTopWidth);
-  const right = Number.parseFloat(style.borderRightWidth);
-  const bottom = Number.parseFloat(style.borderBottomWidth);
-  const left = Number.parseFloat(style.borderLeftWidth);
-  if (top > 0) {
-    ctx.fillStyle = style.borderTopColor;
-    ctx.fillRect(x, y, rect.width, top);
+  function paintFallbackMedia(ctx, element, style, rect, rootRect) {
+    const drawable = element instanceof HTMLImageElement ? element.complete && element.naturalWidth > 0 ? element : null : element instanceof HTMLCanvasElement ? element : element instanceof HTMLVideoElement && element.readyState >= 2 ? element : null;
+    if (!drawable) return;
+    if (!isFallbackMediaOriginClean(drawable)) return;
+    const sourceWidth = drawable instanceof HTMLImageElement ? drawable.naturalWidth : drawable instanceof HTMLVideoElement ? drawable.videoWidth : drawable.width;
+    const sourceHeight = drawable instanceof HTMLImageElement ? drawable.naturalHeight : drawable instanceof HTMLVideoElement ? drawable.videoHeight : drawable.height;
+    if (!(sourceWidth > 0 && sourceHeight > 0)) return;
+    let sourceX = 0;
+    let sourceY = 0;
+    let cropWidth = sourceWidth;
+    let cropHeight = sourceHeight;
+    let targetX = rect.left - rootRect.left;
+    let targetY = rect.top - rootRect.top;
+    let targetWidth = rect.width;
+    let targetHeight = rect.height;
+    const [positionX, positionY] = resolveObjectPosition(style.objectPosition);
+    if (style.objectFit === "cover") {
+      const scale = Math.max(
+        rect.width / sourceWidth,
+        rect.height / sourceHeight
+      );
+      cropWidth = rect.width / scale;
+      cropHeight = rect.height / scale;
+      sourceX = (sourceWidth - cropWidth) * positionX;
+      sourceY = (sourceHeight - cropHeight) * positionY;
+    } else if (style.objectFit === "contain" || style.objectFit === "scale-down") {
+      const containScale = Math.min(
+        rect.width / sourceWidth,
+        rect.height / sourceHeight,
+        style.objectFit === "scale-down" ? 1 : Number.POSITIVE_INFINITY
+      );
+      targetWidth = sourceWidth * containScale;
+      targetHeight = sourceHeight * containScale;
+      targetX += (rect.width - targetWidth) * positionX;
+      targetY += (rect.height - targetHeight) * positionY;
+    }
+    try {
+      ctx.drawImage(
+        drawable,
+        sourceX,
+        sourceY,
+        cropWidth,
+        cropHeight,
+        targetX,
+        targetY,
+        targetWidth,
+        targetHeight
+      );
+    } catch {
+    }
   }
-  if (right > 0) {
-    ctx.fillStyle = style.borderRightColor;
-    ctx.fillRect(x + rect.width - right, y, right, rect.height);
-  }
-  if (bottom > 0) {
-    ctx.fillStyle = style.borderBottomColor;
-    ctx.fillRect(x, y + rect.height - bottom, rect.width, bottom);
-  }
-  if (left > 0) {
-    ctx.fillStyle = style.borderLeftColor;
-    ctx.fillRect(x, y, left, rect.height);
-  }
-}
-function createAsciiSweep(elements, options = {}) {
-  try {
-    return initializeAsciiSweep(elements, options);
-  } catch (error) {
-    console.error("AsciiSweep initialization failed:", error);
-    return null;
-  }
-}
-function initializeAsciiSweep(elements, options) {
-  const config = { ...DEFAULTS, ...options };
-  const { slots, output } = elements;
-  if (!slots || slots.length !== 2) {
-    throw new Error("AsciiSweep needs exactly two slots");
-  }
-  const gl = output.getContext("webgl2", {
-    alpha: true,
-    depth: false,
-    stencil: false,
-    antialias: false,
-    premultipliedAlpha: true
-  });
-  if (!gl || gl.isContextLost()) return null;
-  const probeCtx = (() => {
+  function isFallbackMediaOriginClean(drawable) {
     const probe = document.createElement("canvas");
     probe.width = probe.height = 1;
-    return probe.getContext("2d", { willReadFrequently: true });
-  })();
-  function parseColor(value) {
-    if (!probeCtx || !value) return null;
-    probeCtx.clearRect(0, 0, 1, 1);
-    probeCtx.fillStyle = "#000";
-    probeCtx.fillStyle = value;
-    const resolved = probeCtx.fillStyle;
-    probeCtx.clearRect(0, 0, 1, 1);
-    probeCtx.fillStyle = resolved;
-    probeCtx.fillRect(0, 0, 1, 1);
-    const [r, g, b, a] = probeCtx.getImageData(0, 0, 1, 1).data;
-    if (a === 0) return null;
-    return [r / 255, g / 255, b / 255];
+    const ctx = probe.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return false;
+    try {
+      ctx.drawImage(drawable, 0, 0, 1, 1);
+      ctx.getImageData(0, 0, 1, 1);
+      return true;
+    } catch {
+      return false;
+    }
   }
-  let destroyed = false;
-  let wake = () => {
-  };
-  function compile(type, text) {
-    const shader = gl.createShader(type);
-    gl.shaderSource(shader, text);
-    gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      const message = gl.getShaderInfoLog(shader) || "Unknown shader error";
-      gl.deleteShader(shader);
+  function resolveObjectPosition(position) {
+    const [x = "50%", y = "50%"] = position.split(/\s+/);
+    return [
+      resolvePositionValue(x, "left", "right"),
+      resolvePositionValue(y, "top", "bottom")
+    ];
+  }
+  function resolvePositionValue(value, start, end) {
+    if (value === start) return 0;
+    if (value === end) return 1;
+    if (value === "center") return 0.5;
+    if (value.endsWith("%")) {
+      return Math.min(1, Math.max(0, Number.parseFloat(value) / 100));
+    }
+    return 0.5;
+  }
+  function paintFallbackText(ctx, element, style, rootRect) {
+    const textNodes = Array.from(element.childNodes).filter(
+      (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim()
+    );
+    if (textNodes.length === 0) return;
+    ctx.fillStyle = style.color;
+    ctx.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    ctx.textBaseline = "alphabetic";
+    if ("letterSpacing" in ctx) {
+      ctx.letterSpacing = style.letterSpacing === "normal" ? "0px" : style.letterSpacing;
+    }
+    const textAlign = style.textAlign === "center" || style.textAlign === "right" || style.textAlign === "start" || style.textAlign === "end" ? style.textAlign : "left";
+    const direction = style.direction === "rtl" ? "rtl" : "ltr";
+    ctx.textAlign = textAlign;
+    ctx.direction = direction;
+    const whiteSpace = style.whiteSpace;
+    const preservesNewlines = whiteSpace === "pre" || whiteSpace === "pre-wrap" || whiteSpace === "pre-line" || whiteSpace === "break-spaces";
+    const preservesSpaces = preservesNewlines && whiteSpace !== "pre-line";
+    const anchor = textAlign === "center" ? 0.5 : textAlign === "right" || textAlign === "end" && direction === "ltr" || textAlign === "start" && direction === "rtl" ? 1 : 0;
+    function transform(text) {
+      if (style.textTransform === "uppercase") return text.toUpperCase();
+      if (style.textTransform === "lowercase") return text.toLowerCase();
+      return text;
+    }
+    function drawAcrossRects(text, rects) {
+      const visible = rects.filter(
+        (rect) => rect.right > rootRect.left && rect.left < rootRect.right && rect.bottom > rootRect.top && rect.top < rootRect.bottom
+      );
+      if (visible.length === 0) return;
+      const totalWidth = visible.reduce((sum, rect) => sum + rect.width, 0);
+      let offset = 0;
+      for (let index = 0; index < visible.length; index++) {
+        const rect = visible[index];
+        const remaining = text.length - offset;
+        if (remaining <= 0) break;
+        const count = index === visible.length - 1 ? remaining : Math.min(
+          remaining,
+          Math.max(1, Math.round(text.length * rect.width / totalWidth))
+        );
+        const slice = text.slice(offset, offset + count);
+        offset += count;
+        const line = preservesSpaces ? slice : slice.trim();
+        if (!line.trim()) continue;
+        const x = rect.left - rootRect.left + rect.width * anchor;
+        const metrics = ctx.measureText(line);
+        const ascent = metrics.fontBoundingBoxAscent ?? 0;
+        const descent = metrics.fontBoundingBoxDescent ?? 0;
+        const y = ascent > 0 ? rect.top - rootRect.top + (rect.height - ascent - descent) / 2 + ascent : rect.bottom - rootRect.top - rect.height * 0.2;
+        ctx.fillText(line, x, y, Math.max(rect.width, 1));
+      }
+    }
+    for (const node of textNodes) {
+      const raw = node.textContent ?? "";
+      const range = document.createRange();
+      if (preservesNewlines) {
+        let position = 0;
+        for (const part of raw.split("\n")) {
+          const start = position;
+          position += part.length + 1;
+          if (!part.trim()) continue;
+          range.setStart(node, start);
+          range.setEnd(node, start + part.length);
+          const text2 = transform(
+            preservesSpaces ? part : part.replace(/\s+/g, " ").trim()
+          );
+          drawAcrossRects(text2, Array.from(range.getClientRects()));
+        }
+        continue;
+      }
+      const text = transform(raw.replace(/\s+/g, " ").trim());
+      if (!text) continue;
+      range.selectNodeContents(node);
+      drawAcrossRects(text, Array.from(range.getClientRects()));
+    }
+  }
+  function paintFallbackBorders(ctx, style, rect, rootRect) {
+    const x = rect.left - rootRect.left;
+    const y = rect.top - rootRect.top;
+    const top = Number.parseFloat(style.borderTopWidth);
+    const right = Number.parseFloat(style.borderRightWidth);
+    const bottom = Number.parseFloat(style.borderBottomWidth);
+    const left = Number.parseFloat(style.borderLeftWidth);
+    if (top > 0) {
+      ctx.fillStyle = style.borderTopColor;
+      ctx.fillRect(x, y, rect.width, top);
+    }
+    if (right > 0) {
+      ctx.fillStyle = style.borderRightColor;
+      ctx.fillRect(x + rect.width - right, y, right, rect.height);
+    }
+    if (bottom > 0) {
+      ctx.fillStyle = style.borderBottomColor;
+      ctx.fillRect(x, y + rect.height - bottom, rect.width, bottom);
+    }
+    if (left > 0) {
+      ctx.fillStyle = style.borderLeftColor;
+      ctx.fillRect(x, y, left, rect.height);
+    }
+  }
+  function createAsciiSweep(elements, options = {}) {
+    try {
+      return initializeAsciiSweep(elements, options);
+    } catch (error) {
+      console.error("AsciiSweep initialization failed:", error);
+      return null;
+    }
+  }
+  function initializeAsciiSweep(elements, options) {
+    const config = { ...DEFAULTS, ...options };
+    const { slots, output } = elements;
+    if (!slots || slots.length !== 2) {
+      throw new Error("AsciiSweep needs exactly two slots");
+    }
+    const gl = output.getContext("webgl2", {
+      alpha: true,
+      depth: false,
+      stencil: false,
+      antialias: false,
+      premultipliedAlpha: true
+    });
+    if (!gl || gl.isContextLost()) return null;
+    const probeCtx = (() => {
+      const probe = document.createElement("canvas");
+      probe.width = probe.height = 1;
+      return probe.getContext("2d", { willReadFrequently: true });
+    })();
+    function parseColor(value) {
+      if (!probeCtx || !value) return null;
+      probeCtx.clearRect(0, 0, 1, 1);
+      probeCtx.fillStyle = "#000";
+      probeCtx.fillStyle = value;
+      const resolved = probeCtx.fillStyle;
+      probeCtx.clearRect(0, 0, 1, 1);
+      probeCtx.fillStyle = resolved;
+      probeCtx.fillRect(0, 0, 1, 1);
+      const [r, g, b, a] = probeCtx.getImageData(0, 0, 1, 1).data;
+      if (a === 0) return null;
+      return [r / 255, g / 255, b / 255];
+    }
+    let destroyed = false;
+    let wake = () => {
+    };
+    function compile(type, text) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, text);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        const message = gl.getShaderInfoLog(shader) || "Unknown shader error";
+        gl.deleteShader(shader);
+        throw new Error(message);
+      }
+      return shader;
+    }
+    const vertexShader = compile(gl.VERTEX_SHADER, VERT);
+    const fragmentShader = compile(gl.FRAGMENT_SHADER, FRAG);
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      const message = gl.getProgramInfoLog(program) || "Unknown program link error";
+      gl.deleteProgram(program);
+      gl.deleteShader(vertexShader);
+      gl.deleteShader(fragmentShader);
       throw new Error(message);
     }
-    return shader;
-  }
-  const vertexShader = compile(gl.VERTEX_SHADER, VERT);
-  const fragmentShader = compile(gl.FRAGMENT_SHADER, FRAG);
-  const program = gl.createProgram();
-  gl.attachShader(program, vertexShader);
-  gl.attachShader(program, fragmentShader);
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    const message = gl.getProgramInfoLog(program) || "Unknown program link error";
-    gl.deleteProgram(program);
-    gl.deleteShader(vertexShader);
-    gl.deleteShader(fragmentShader);
-    throw new Error(message);
-  }
-  const uniforms = {};
-  const uniformCount = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
-  for (let i = 0; i < uniformCount; i++) {
-    const info = gl.getActiveUniform(program, i);
-    uniforms[info.name] = gl.getUniformLocation(program, info.name);
-  }
-  const quad = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, quad);
-  gl.bufferData(
-    gl.ARRAY_BUFFER,
-    new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
-    gl.STATIC_DRAW
-  );
-  gl.enableVertexAttribArray(0);
-  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-  function createSlotTexture() {
-    const texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texParameteri(
-      gl.TEXTURE_2D,
-      gl.TEXTURE_MIN_FILTER,
-      gl.LINEAR_MIPMAP_LINEAR
+    const uniforms = {};
+    const uniformCount = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
+    for (let i = 0; i < uniformCount; i++) {
+      const info = gl.getActiveUniform(program, i);
+      uniforms[info.name] = gl.getUniformLocation(program, info.name);
+    }
+    const quad = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
+      gl.STATIC_DRAW
     );
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGBA,
-      1,
-      1,
-      0,
-      gl.RGBA,
-      gl.UNSIGNED_BYTE,
-      new Uint8Array([0, 0, 0, 0])
-    );
-    return texture;
-  }
-  const firstCtx = slots[0].source.getContext(
-    "2d"
-  );
-  const htmlInCanvas = Boolean(
-    firstCtx && typeof firstCtx.drawElementImage === "function" && typeof slots[0].source.requestPaint === "function"
-  );
-  if (htmlInCanvas) {
-    for (const slot of slots) prepareHtmlInCanvas(slot.source, slot.content);
-  }
-  const states = slots.map((slot, index) => ({
-    source: slot.source,
-    content: slot.content,
-    ctx: index === 0 ? firstCtx : slot.source.getContext("2d"),
-    paintable: slot.source,
-    texture: createSlotTexture(),
-    fallbackCanvas: null,
-    dirty: false,
-    stamp: 0,
-    captureTimer: 0,
-    captureDeadline: 0,
-    scrollTimer: 0,
-    capturedScrollLeft: 0,
-    capturedScrollTop: 0,
-    captureErrorLogged: false,
-    uploadErrorLogged: false
-  }));
-  if (htmlInCanvas) {
-    for (const state of states) {
-      state.paintable.onpaint = () => {
-        try {
-          state.ctx.reset();
-          drawHtmlInCanvas(state.source, state.ctx, state.content);
-          state.dirty = true;
-          wake();
-        } catch {
-        }
-      };
-    }
-  }
-  function queueCapture(state, immediate = false) {
-    if (htmlInCanvas || destroyed) return;
-    const delay = immediate ? 0 : FALLBACK_CAPTURE_DELAY;
-    const deadline = performance.now() + delay;
-    if (state.captureTimer && state.captureDeadline <= deadline) return;
-    window.clearTimeout(state.captureTimer);
-    state.captureDeadline = deadline;
-    state.captureTimer = window.setTimeout(
-      () => captureFallback(state),
-      delay
-    );
-  }
-  function captureFallback(state) {
-    window.clearTimeout(state.captureTimer);
-    window.clearTimeout(state.scrollTimer);
-    state.captureTimer = 0;
-    state.scrollTimer = 0;
-    try {
-      paintFallbackSnapshot(state.content, state.source, getCanvasPixelRatio(output, gl));
-      if (destroyed) return;
-      state.fallbackCanvas = state.source;
-      state.capturedScrollLeft = state.content.scrollLeft;
-      state.capturedScrollTop = state.content.scrollTop;
-      state.dirty = true;
-      state.captureErrorLogged = false;
-      wake();
-    } catch (error) {
-      if (!destroyed && !state.captureErrorLogged) {
-        state.captureErrorLogged = true;
-        console.warn("AsciiSweep could not capture its HTML fallback:", error);
-      }
-    }
-  }
-  function requestCapture(immediate = false) {
-    for (const state of states) {
-      if (htmlInCanvas) state.paintable.requestPaint?.();
-      else queueCapture(state, immediate);
-    }
-  }
-  function applyStacking(shown) {
-    states.forEach((state, index) => {
-      const front = index === shown;
-      const layer = htmlInCanvas ? state.source : state.content;
-      layer.style.zIndex = front ? "1" : "0";
-      layer.style.pointerEvents = front ? "" : "none";
-      state.content.style.backgroundColor = backgroundCss;
-      if (front) layer.removeAttribute("aria-hidden");
-      else layer.setAttribute("aria-hidden", "true");
-      layer.inert = !front;
-    });
-  }
-  let contentMaxX = 1;
-  function syncCanvasSize() {
-    let changed = false;
-    contentMaxX = Math.min(
-      1,
-      Math.max(
-        0.05,
-        states[0].content.clientWidth / Math.max(output.clientWidth, 1)
-      )
-    );
-    const dpr = getCanvasPixelRatio(output, gl);
-    const width = Math.max(1, Math.round(output.clientWidth * dpr));
-    const height = Math.max(1, Math.round(output.clientHeight * dpr));
-    if (output.width !== width || output.height !== height) {
-      output.width = width;
-      output.height = height;
-      changed = true;
-    }
-    if (htmlInCanvas) {
-      for (const state of states) {
-        const sourceWidth = Math.max(1, Math.round(state.source.clientWidth * dpr));
-        const sourceHeight = Math.max(1, Math.round(state.source.clientHeight * dpr));
-        if (state.source.width !== sourceWidth || state.source.height !== sourceHeight) {
-          state.source.width = sourceWidth;
-          state.source.height = sourceHeight;
-          changed = true;
-        }
-        state.paintable.requestPaint?.();
-      }
-    }
-    return changed;
-  }
-  syncCanvasSize();
-  let backingRgb = [1, 1, 1];
-  let backingLum = 1;
-  let inkRgb = [0.29, 0.87, 0.5];
-  let backgroundCss = "#ffffff";
-  function syncBacking() {
-    let resolved = null;
-    let resolvedCss = null;
-    if (config.background && config.background !== "auto") {
-      resolved = parseColor(config.background);
-      if (resolved) resolvedCss = config.background;
-    }
-    if (!resolved) {
-      let el = states[0].content;
-      while (el) {
-        const bg = getComputedStyle(el).backgroundColor;
-        if (bg && bg !== "transparent") {
-          const parsed = parseColor(bg);
-          if (parsed) {
-            resolved = parsed;
-            resolvedCss = bg;
-            break;
-          }
-        }
-        el = el.parentElement;
-      }
-    }
-    backingRgb = resolved ?? [1, 1, 1];
-    backingLum = 0.299 * backingRgb[0] + 0.587 * backingRgb[1] + 0.114 * backingRgb[2];
-    backgroundCss = resolvedCss ?? "#ffffff";
-    inkRgb = parseColor(config.color) ?? [0.29, 0.87, 0.5];
-  }
-  syncBacking();
-  const glyphData = new Uint32Array(MAX_GLYPHS);
-  function resolveGlyphs() {
-    const ramp = config.glyphs.length > 1 ? config.glyphs : CHARSETS[config.charset] ?? CHARSETS.ascii;
-    const count = Math.min(ramp.length, MAX_GLYPHS);
-    glyphData.fill(0);
-    for (let i = 0; i < count; i++) glyphData[i] = ramp[i] >>> 0;
-    return count;
-  }
-  function uploadSlot(state) {
-    const bitmap = htmlInCanvas ? state.source : state.fallbackCanvas;
-    if (!bitmap || !state.dirty) return;
-    if (bitmap.width < 1 || bitmap.height < 1) return;
-    state.dirty = false;
-    try {
-      gl.bindTexture(gl.TEXTURE_2D, state.texture);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    function createSlotTexture() {
+      const texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texParameteri(
+        gl.TEXTURE_2D,
+        gl.TEXTURE_MIN_FILTER,
+        gl.LINEAR_MIPMAP_LINEAR
+      );
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.texImage2D(
         gl.TEXTURE_2D,
         0,
         gl.RGBA,
+        1,
+        1,
+        0,
         gl.RGBA,
         gl.UNSIGNED_BYTE,
-        bitmap
+        new Uint8Array([0, 0, 0, 0])
       );
-      gl.generateMipmap(gl.TEXTURE_2D);
-      state.stamp = performance.now();
-      state.uploadErrorLogged = false;
-    } catch (error) {
-      if (!state.uploadErrorLogged) {
-        state.uploadErrorLogged = true;
-        console.warn("AsciiSweep could not upload a panel texture:", error);
-      }
+      return texture;
     }
-  }
-  let currentSlot = 0;
-  let fromSlot = 0;
-  let toSlot = 1;
-  let progress = 0;
-  let sweeping = false;
-  let sweepStart = 0;
-  let sweepClockSet = false;
-  let sweepAngle = config.angle;
-  let settleFrames = 0;
-  let active = 0;
-  let fadingOut = false;
-  const controlled = () => config.progress >= 0;
-  function render(now) {
-    for (const state of states) uploadSlot(state);
-    const from = states[fromSlot];
-    const to = states[toSlot];
-    gl.useProgram(program);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, from.texture);
-    gl.uniform1i(uniforms.uFrom, 0);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, to.texture);
-    gl.uniform1i(uniforms.uTo, 1);
-    gl.uniform2f(uniforms.uResolution, output.width, output.height);
-    gl.uniform1f(uniforms.uProgress, progress);
-    const radians = sweepAngle * Math.PI / 180;
-    gl.uniform2f(uniforms.uDir, Math.cos(radians), Math.sin(radians));
-    const dpr = output.width / Math.max(output.clientWidth, 1);
-    const glyphCss = Math.max(config.scale, 0.5);
-    const spacing = Math.round(Math.min(Math.max(config.spacing, 0), 3));
-    gl.uniform1f(uniforms.uGlyphPx, glyphCss * dpr);
-    gl.uniform1f(uniforms.uSpacing, spacing);
-    gl.uniform1f(
-      uniforms.uLod,
-      Math.max(0, Math.log2((5 + 2 * spacing) * glyphCss * dpr) - 1)
+    const firstCtx = slots[0].source.getContext(
+      "2d"
     );
-    const glyphCount = resolveGlyphs();
-    gl.uniform1uiv(uniforms["uGlyphs[0]"], glyphData);
-    gl.uniform1i(uniforms.uGlyphCount, glyphCount);
-    gl.uniform1f(uniforms.uBand, Math.min(Math.max(config.band, 0.02), 1));
-    gl.uniform1f(uniforms.uSoftness, config.softness);
-    gl.uniform1f(uniforms.uTurbulence, Math.max(config.turbulence, 0));
-    gl.uniform1f(uniforms.uTrail, Math.max(config.trail, 0));
-    gl.uniform3f(uniforms.uInk, inkRgb[0], inkRgb[1], inkRgb[2]);
-    gl.uniform1f(uniforms.uTint, config.tint);
-    gl.uniform1f(uniforms.uGlow, config.glow);
-    gl.uniform1f(uniforms.uAberration, Math.max(config.aberration, 0) * dpr);
-    gl.uniform1f(uniforms.uFlicker, config.flicker);
-    gl.uniform1f(uniforms.uDensity, config.density);
-    gl.uniform1f(uniforms.uDisplace, Math.max(config.displace, 0) * dpr);
-    gl.uniform1f(uniforms.uContrast, Math.max(config.contrast, 0));
-    gl.uniform1f(uniforms.uBrightness, config.brightness);
-    gl.uniform1f(uniforms.uInvert, config.invert);
-    gl.uniform1f(uniforms.uThreshold, Math.max(config.threshold, 1e-3));
-    gl.uniform1f(uniforms.uFade, config.fade);
-    gl.uniform1f(
-      uniforms.uAdditive,
-      config.blend === "add" ? 1 : config.blend === "over" ? 0 : backingLum < 0.5 ? 1 : 0
+    const htmlInCanvas = Boolean(
+      firstCtx && typeof firstCtx.drawElementImage === "function" && typeof slots[0].source.requestPaint === "function"
     );
-    gl.uniform3f(uniforms.uBg, backingRgb[0], backingRgb[1], backingRgb[2]);
-    gl.uniform1f(uniforms.uBgLum, backingLum);
-    gl.uniform1f(uniforms.uTime, now / 1e3);
-    gl.uniform1f(uniforms.uActive, active);
-    gl.uniform1f(uniforms.uMaxX, contentMaxX);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0, 0, output.width, output.height);
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  }
-  let raf = 0;
-  let running = false;
-  let lastFrame = performance.now();
-  let visible = true;
-  let pageVisible = typeof document === "undefined" || document.visibilityState !== "hidden";
-  const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-  let reducedMotion = motionQuery.matches;
-  function ease(t) {
-    const c = 1 - Math.min(Math.max(t, 0), 1);
-    return 1 - c * c * c;
-  }
-  function easeInverse(p) {
-    return 1 - Math.cbrt(1 - Math.min(Math.max(p, 0), 1));
-  }
-  function frame(now) {
-    if (destroyed) return;
-    if (!visible || !pageVisible) {
-      running = false;
-      return;
+    if (htmlInCanvas) {
+      for (const slot of slots) prepareHtmlInCanvas(slot.source, slot.content);
     }
-    if (controlled()) {
-      progress = Math.min(Math.max(config.progress, 0), 1);
-      fromSlot = 0;
-      toSlot = 1;
-      const shown = progress >= 0.5 ? 1 : 0;
-      if (shown !== currentSlot) {
-        currentSlot = shown;
-        applyStacking(currentSlot);
-      }
-      active = 1;
-      render(now);
-      running = false;
-      return;
-    }
-    if (sweeping) {
-      if (!sweepClockSet) {
-        sweepClockSet = true;
-        sweepStart = now;
-      }
-      const duration = Math.max(config.duration, 0.05);
-      const linear = reducedMotion ? 1 : Math.min(1, (now - sweepStart) / 1e3 / duration);
-      progress = ease(linear);
-      if (linear >= 1) {
-        progress = 1;
-        sweeping = false;
-        settleFrames = 2;
-        config.onSweepEnd?.(currentSlot);
+    const states = slots.map((slot, index) => ({
+      source: slot.source,
+      content: slot.content,
+      ctx: index === 0 ? firstCtx : slot.source.getContext("2d"),
+      paintable: slot.source,
+      texture: createSlotTexture(),
+      fallbackCanvas: null,
+      dirty: false,
+      stamp: 0,
+      captureTimer: 0,
+      captureDeadline: 0,
+      scrollTimer: 0,
+      capturedScrollLeft: 0,
+      capturedScrollTop: 0,
+      captureErrorLogged: false,
+      uploadErrorLogged: false
+    }));
+    if (htmlInCanvas) {
+      for (const state of states) {
+        state.paintable.onpaint = () => {
+          try {
+            state.ctx.reset();
+            drawHtmlInCanvas(state.source, state.ctx, state.content);
+            state.dirty = true;
+            wake();
+          } catch {
+          }
+        };
       }
     }
-    if (fadingOut) {
-      const step = reducedMotion ? 1 : (now - lastFrame) / 1e3 / FADE_OUT_S;
-      active = Math.max(0, active - Math.max(step, 0));
-      if (active <= 1e-3) {
-        active = 0;
-        fadingOut = false;
+    function queueCapture(state, immediate = false) {
+      if (htmlInCanvas || destroyed) return;
+      const delay = immediate ? 0 : FALLBACK_CAPTURE_DELAY;
+      const deadline = performance.now() + delay;
+      if (state.captureTimer && state.captureDeadline <= deadline) return;
+      window.clearTimeout(state.captureTimer);
+      state.captureDeadline = deadline;
+      state.captureTimer = window.setTimeout(
+        () => captureFallback(state),
+        delay
+      );
+    }
+    function captureFallback(state) {
+      window.clearTimeout(state.captureTimer);
+      window.clearTimeout(state.scrollTimer);
+      state.captureTimer = 0;
+      state.scrollTimer = 0;
+      try {
+        paintFallbackSnapshot(state.content, state.source, getCanvasPixelRatio(output, gl));
+        if (destroyed) return;
+        state.fallbackCanvas = state.source;
+        state.capturedScrollLeft = state.content.scrollLeft;
+        state.capturedScrollTop = state.content.scrollTop;
+        state.dirty = true;
+        state.captureErrorLogged = false;
+        wake();
+      } catch (error) {
+        if (!destroyed && !state.captureErrorLogged) {
+          state.captureErrorLogged = true;
+          console.warn("AsciiSweep could not capture its HTML fallback:", error);
+        }
       }
     }
-    lastFrame = now;
-    render(now);
-    if (!sweeping && !fadingOut) {
-      if (settleFrames > 0) {
-        settleFrames -= 1;
-        if (settleFrames === 0) fadingOut = true;
-      } else if (active === 0) {
+    function requestCapture(immediate = false) {
+      for (const state of states) {
+        if (htmlInCanvas) state.paintable.requestPaint?.();
+        else queueCapture(state, immediate);
+      }
+    }
+    function applyStacking(shown) {
+      states.forEach((state, index) => {
+        const front = index === shown;
+        const layer = htmlInCanvas ? state.source : state.content;
+        layer.style.zIndex = front ? "1" : "0";
+        layer.style.pointerEvents = front ? "" : "none";
+        state.content.style.backgroundColor = backgroundCss;
+        if (front) layer.removeAttribute("aria-hidden");
+        else layer.setAttribute("aria-hidden", "true");
+        layer.inert = !front;
+      });
+    }
+    let contentMaxX = 1;
+    function syncCanvasSize() {
+      let changed = false;
+      contentMaxX = Math.min(
+        1,
+        Math.max(
+          0.05,
+          states[0].content.clientWidth / Math.max(output.clientWidth, 1)
+        )
+      );
+      const dpr = getCanvasPixelRatio(output, gl);
+      const width = Math.max(1, Math.round(output.clientWidth * dpr));
+      const height = Math.max(1, Math.round(output.clientHeight * dpr));
+      if (output.width !== width || output.height !== height) {
+        output.width = width;
+        output.height = height;
+        changed = true;
+      }
+      if (htmlInCanvas) {
+        for (const state of states) {
+          const sourceWidth = Math.max(1, Math.round(state.source.clientWidth * dpr));
+          const sourceHeight = Math.max(1, Math.round(state.source.clientHeight * dpr));
+          if (state.source.width !== sourceWidth || state.source.height !== sourceHeight) {
+            state.source.width = sourceWidth;
+            state.source.height = sourceHeight;
+            changed = true;
+          }
+          state.paintable.requestPaint?.();
+        }
+      }
+      return changed;
+    }
+    syncCanvasSize();
+    let backingRgb = [1, 1, 1];
+    let backingLum = 1;
+    let inkRgb = [0.29, 0.87, 0.5];
+    let backgroundCss = "#ffffff";
+    function syncBacking() {
+      let resolved = null;
+      let resolvedCss = null;
+      if (config.background && config.background !== "auto") {
+        resolved = parseColor(config.background);
+        if (resolved) resolvedCss = config.background;
+      }
+      if (!resolved) {
+        let el = states[0].content;
+        while (el) {
+          const bg = getComputedStyle(el).backgroundColor;
+          if (bg && bg !== "transparent") {
+            const parsed = parseColor(bg);
+            if (parsed) {
+              resolved = parsed;
+              resolvedCss = bg;
+              break;
+            }
+          }
+          el = el.parentElement;
+        }
+      }
+      backingRgb = resolved ?? [1, 1, 1];
+      backingLum = 0.299 * backingRgb[0] + 0.587 * backingRgb[1] + 0.114 * backingRgb[2];
+      backgroundCss = resolvedCss ?? "#ffffff";
+      inkRgb = parseColor(config.color) ?? [0.29, 0.87, 0.5];
+    }
+    syncBacking();
+    const glyphData = new Uint32Array(MAX_GLYPHS);
+    function resolveGlyphs() {
+      const ramp = config.glyphs.length > 1 ? config.glyphs : CHARSETS[config.charset] ?? CHARSETS.ascii;
+      const count = Math.min(ramp.length, MAX_GLYPHS);
+      glyphData.fill(0);
+      for (let i = 0; i < count; i++) glyphData[i] = ramp[i] >>> 0;
+      return count;
+    }
+    function uploadSlot(state) {
+      const bitmap = htmlInCanvas ? state.source : state.fallbackCanvas;
+      if (!bitmap || !state.dirty) return;
+      if (bitmap.width < 1 || bitmap.height < 1) return;
+      state.dirty = false;
+      try {
+        gl.bindTexture(gl.TEXTURE_2D, state.texture);
+        gl.texImage2D(
+          gl.TEXTURE_2D,
+          0,
+          gl.RGBA,
+          gl.RGBA,
+          gl.UNSIGNED_BYTE,
+          bitmap
+        );
+        gl.generateMipmap(gl.TEXTURE_2D);
+        state.stamp = performance.now();
+        state.uploadErrorLogged = false;
+      } catch (error) {
+        if (!state.uploadErrorLogged) {
+          state.uploadErrorLogged = true;
+          console.warn("AsciiSweep could not upload a panel texture:", error);
+        }
+      }
+    }
+    let currentSlot = 0;
+    let fromSlot = 0;
+    let toSlot = 1;
+    let progress = 0;
+    let sweeping = false;
+    let sweepStart = 0;
+    let sweepClockSet = false;
+    let sweepAngle = config.angle;
+    let settleFrames = 0;
+    let active = 0;
+    let fadingOut = false;
+    const controlled = () => config.progress >= 0;
+    function render(now) {
+      for (const state of states) uploadSlot(state);
+      const from = states[fromSlot];
+      const to = states[toSlot];
+      gl.useProgram(program);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, from.texture);
+      gl.uniform1i(uniforms.uFrom, 0);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, to.texture);
+      gl.uniform1i(uniforms.uTo, 1);
+      gl.uniform2f(uniforms.uResolution, output.width, output.height);
+      gl.uniform1f(uniforms.uProgress, progress);
+      const radians = sweepAngle * Math.PI / 180;
+      gl.uniform2f(uniforms.uDir, Math.cos(radians), Math.sin(radians));
+      const dpr = output.width / Math.max(output.clientWidth, 1);
+      const glyphCss = Math.max(config.scale, 0.5);
+      const spacing = Math.round(Math.min(Math.max(config.spacing, 0), 3));
+      gl.uniform1f(uniforms.uGlyphPx, glyphCss * dpr);
+      gl.uniform1f(uniforms.uSpacing, spacing);
+      gl.uniform1f(
+        uniforms.uLod,
+        Math.max(0, Math.log2((5 + 2 * spacing) * glyphCss * dpr) - 1)
+      );
+      const glyphCount = resolveGlyphs();
+      gl.uniform1uiv(uniforms["uGlyphs[0]"], glyphData);
+      gl.uniform1i(uniforms.uGlyphCount, glyphCount);
+      gl.uniform1f(uniforms.uBand, Math.min(Math.max(config.band, 0.02), 1));
+      gl.uniform1f(uniforms.uSoftness, config.softness);
+      gl.uniform1f(uniforms.uTurbulence, Math.max(config.turbulence, 0));
+      gl.uniform1f(uniforms.uTrail, Math.max(config.trail, 0));
+      gl.uniform3f(uniforms.uInk, inkRgb[0], inkRgb[1], inkRgb[2]);
+      gl.uniform1f(uniforms.uTint, config.tint);
+      gl.uniform1f(uniforms.uGlow, config.glow);
+      gl.uniform1f(uniforms.uAberration, Math.max(config.aberration, 0) * dpr);
+      gl.uniform1f(uniforms.uFlicker, config.flicker);
+      gl.uniform1f(uniforms.uDensity, config.density);
+      gl.uniform1f(uniforms.uDisplace, Math.max(config.displace, 0) * dpr);
+      gl.uniform1f(uniforms.uContrast, Math.max(config.contrast, 0));
+      gl.uniform1f(uniforms.uBrightness, config.brightness);
+      gl.uniform1f(uniforms.uInvert, config.invert);
+      gl.uniform1f(uniforms.uThreshold, Math.max(config.threshold, 1e-3));
+      gl.uniform1f(uniforms.uFade, config.fade);
+      gl.uniform1f(
+        uniforms.uAdditive,
+        config.blend === "add" ? 1 : config.blend === "over" ? 0 : backingLum < 0.5 ? 1 : 0
+      );
+      gl.uniform3f(uniforms.uBg, backingRgb[0], backingRgb[1], backingRgb[2]);
+      gl.uniform1f(uniforms.uBgLum, backingLum);
+      gl.uniform1f(uniforms.uTime, now / 1e3);
+      gl.uniform1f(uniforms.uActive, active);
+      gl.uniform1f(uniforms.uMaxX, contentMaxX);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, output.width, output.height);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+    let raf = 0;
+    let running = false;
+    let lastFrame = performance.now();
+    let visible = true;
+    let pageVisible = typeof document === "undefined" || document.visibilityState !== "hidden";
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let reducedMotion = motionQuery.matches;
+    function ease(t) {
+      const c = 1 - Math.min(Math.max(t, 0), 1);
+      return 1 - c * c * c;
+    }
+    function easeInverse(p) {
+      return 1 - Math.cbrt(1 - Math.min(Math.max(p, 0), 1));
+    }
+    function frame(now) {
+      if (destroyed) return;
+      if (!visible || !pageVisible) {
         running = false;
         return;
       }
+      if (controlled()) {
+        progress = Math.min(Math.max(config.progress, 0), 1);
+        fromSlot = 0;
+        toSlot = 1;
+        const shown = progress >= 0.5 ? 1 : 0;
+        if (shown !== currentSlot) {
+          currentSlot = shown;
+          applyStacking(currentSlot);
+        }
+        active = 1;
+        render(now);
+        running = false;
+        return;
+      }
+      if (sweeping) {
+        if (!sweepClockSet) {
+          sweepClockSet = true;
+          sweepStart = now;
+        }
+        const duration = Math.max(config.duration, 0.05);
+        const linear = reducedMotion ? 1 : Math.min(1, (now - sweepStart) / 1e3 / duration);
+        progress = ease(linear);
+        if (linear >= 1) {
+          progress = 1;
+          sweeping = false;
+          settleFrames = 2;
+          config.onSweepEnd?.(currentSlot);
+        }
+      }
+      if (fadingOut) {
+        const step = reducedMotion ? 1 : (now - lastFrame) / 1e3 / FADE_OUT_S;
+        active = Math.max(0, active - Math.max(step, 0));
+        if (active <= 1e-3) {
+          active = 0;
+          fadingOut = false;
+        }
+      }
+      lastFrame = now;
+      render(now);
+      if (!sweeping && !fadingOut) {
+        if (settleFrames > 0) {
+          settleFrames -= 1;
+          if (settleFrames === 0) fadingOut = true;
+        } else if (active === 0) {
+          running = false;
+          return;
+        }
+      }
+      raf = requestAnimationFrame(frame);
     }
-    raf = requestAnimationFrame(frame);
-  }
-  function start() {
-    if (destroyed || running || !visible || !pageVisible) return;
-    running = true;
-    lastFrame = performance.now();
-    raf = requestAnimationFrame(frame);
-  }
-  wake = start;
-  applyStacking(currentSlot);
-  requestCapture(true);
-  start();
-  function sweep(to, sweepOptions) {
-    if (destroyed || controlled()) return;
-    const target = to === 1 ? 1 : 0;
-    if (sweeping ? target === toSlot : target === currentSlot) return;
-    if (sweeping) {
-      progress = 1 - progress;
-      const previousFrom = fromSlot;
-      fromSlot = toSlot;
-      toSlot = previousFrom;
-      sweepAngle = (sweepAngle + 180) % 360;
-      sweepStart = performance.now() - easeInverse(progress) * Math.max(config.duration, 0.05) * 1e3;
-      sweepClockSet = true;
-    } else {
-      fromSlot = currentSlot;
-      toSlot = target;
-      progress = 0;
-      sweepAngle = sweepOptions?.angle ?? config.angle;
-      sweepClockSet = false;
+    function start() {
+      if (destroyed || running || !visible || !pageVisible) return;
+      running = true;
+      lastFrame = performance.now();
+      raf = requestAnimationFrame(frame);
     }
-    currentSlot = target;
-    sweeping = true;
-    settleFrames = 0;
-    fadingOut = false;
-    active = 1;
+    wake = start;
     applyStacking(currentSlot);
     requestCapture(true);
-    config.onSweepStart?.(target);
     start();
-  }
-  function onMotionChange() {
-    reducedMotion = motionQuery.matches;
-    start();
-  }
-  motionQuery.addEventListener("change", onMotionChange);
-  let themeTimer = 0;
-  function onThemeShift() {
-    syncBacking();
-    start();
-    window.clearTimeout(themeTimer);
-    themeTimer = window.setTimeout(() => {
+    function sweep(to, sweepOptions) {
+      if (destroyed || controlled()) return;
+      const target = to === 1 ? 1 : 0;
+      if (sweeping ? target === toSlot : target === currentSlot) return;
+      if (sweeping) {
+        progress = 1 - progress;
+        const previousFrom = fromSlot;
+        fromSlot = toSlot;
+        toSlot = previousFrom;
+        sweepAngle = (sweepAngle + 180) % 360;
+        sweepStart = performance.now() - easeInverse(progress) * Math.max(config.duration, 0.05) * 1e3;
+        sweepClockSet = true;
+      } else {
+        fromSlot = currentSlot;
+        toSlot = target;
+        progress = 0;
+        sweepAngle = sweepOptions?.angle ?? config.angle;
+        sweepClockSet = false;
+      }
+      currentSlot = target;
+      sweeping = true;
+      settleFrames = 0;
+      fadingOut = false;
+      active = 1;
+      applyStacking(currentSlot);
+      requestCapture(true);
+      config.onSweepStart?.(target);
+      start();
+    }
+    function onMotionChange() {
+      reducedMotion = motionQuery.matches;
+      start();
+    }
+    motionQuery.addEventListener("change", onMotionChange);
+    let themeTimer = 0;
+    function onThemeShift() {
       syncBacking();
+      start();
+      window.clearTimeout(themeTimer);
+      themeTimer = window.setTimeout(() => {
+        syncBacking();
+        requestCapture();
+        start();
+      }, 300);
+    }
+    const themeObserver = new MutationObserver(onThemeShift);
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class", "style", "data-theme"]
+    });
+    const schemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    schemeQuery.addEventListener("change", onThemeShift);
+    const resizeObserver = createCanvasResizeObserver(() => {
+      if (syncCanvasSize()) requestCapture();
+      start();
+    });
+    resizeObserver.observe(output);
+    for (const state of states) resizeObserver.observe(state.content);
+    const intersection = new IntersectionObserver((entries) => {
+      visible = entries[entries.length - 1]?.isIntersecting ?? true;
+      if (visible) start();
+    });
+    intersection.observe(output);
+    let syncingScroll = false;
+    function onPanelScroll(event) {
+      if (syncingScroll || destroyed) return;
+      const source = event.target;
+      if (!source) return;
+      syncingScroll = true;
+      for (const state of states) {
+        if (state.content === source) continue;
+        if (state.content.scrollTop !== source.scrollTop) {
+          state.content.scrollTop = source.scrollTop;
+        }
+        if (state.content.scrollLeft !== source.scrollLeft) {
+          state.content.scrollLeft = source.scrollLeft;
+        }
+      }
+      syncingScroll = false;
       requestCapture();
       start();
-    }, 300);
-  }
-  const themeObserver = new MutationObserver(onThemeShift);
-  themeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ["class", "style", "data-theme"]
-  });
-  const schemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
-  schemeQuery.addEventListener("change", onThemeShift);
-  const resizeObserver = createCanvasResizeObserver(() => {
-    if (syncCanvasSize()) requestCapture();
-    start();
-  });
-  resizeObserver.observe(output);
-  for (const state of states) resizeObserver.observe(state.content);
-  const intersection = new IntersectionObserver((entries) => {
-    visible = entries[entries.length - 1]?.isIntersecting ?? true;
-    if (visible) start();
-  });
-  intersection.observe(output);
-  let syncingScroll = false;
-  function onPanelScroll(event) {
-    if (syncingScroll || destroyed) return;
-    const source = event.target;
-    if (!source) return;
-    syncingScroll = true;
-    for (const state of states) {
-      if (state.content === source) continue;
-      if (state.content.scrollTop !== source.scrollTop) {
-        state.content.scrollTop = source.scrollTop;
-      }
-      if (state.content.scrollLeft !== source.scrollLeft) {
-        state.content.scrollLeft = source.scrollLeft;
-      }
     }
-    syncingScroll = false;
-    requestCapture();
-    start();
-  }
-  for (const state of states) {
-    state.content.addEventListener("scroll", onPanelScroll, { passive: true });
-  }
-  function onPageVisibility() {
-    pageVisible = document.visibilityState !== "hidden";
-    if (pageVisible) start();
-  }
-  document.addEventListener("visibilitychange", onPageVisibility);
-  const contentObservers = htmlInCanvas ? [] : states.map((state) => {
-    const observer = new MutationObserver(() => queueCapture(state));
-    observer.observe(state.content, {
-      attributes: true,
-      attributeFilter: ["class", "hidden", "src", "srcset", "style"],
-      characterData: true,
-      childList: true,
-      subtree: true
+    for (const state of states) {
+      state.content.addEventListener("scroll", onPanelScroll, { passive: true });
+    }
+    function onPageVisibility() {
+      pageVisible = document.visibilityState !== "hidden";
+      if (pageVisible) start();
+    }
+    document.addEventListener("visibilitychange", onPageVisibility);
+    const contentObservers = htmlInCanvas ? [] : states.map((state) => {
+      const observer = new MutationObserver(() => queueCapture(state));
+      observer.observe(state.content, {
+        attributes: true,
+        attributeFilter: ["class", "hidden", "src", "srcset", "style"],
+        characterData: true,
+        childList: true,
+        subtree: true
+      });
+      return observer;
     });
-    return observer;
-  });
-  function onFallbackVisualChange() {
-    for (const state of states) queueCapture(state);
-  }
-  if (!htmlInCanvas) {
-    for (const state of states) {
-      state.content.addEventListener("load", onFallbackVisualChange, true);
-      state.content.addEventListener(
-        "loadeddata",
-        onFallbackVisualChange,
-        true
-      );
-      state.content.addEventListener("input", onFallbackVisualChange, true);
-      state.content.addEventListener("change", onFallbackVisualChange, true);
-      state.content.addEventListener(
-        "transitionend",
-        onFallbackVisualChange,
-        true
-      );
-      state.content.addEventListener(
-        "animationend",
-        onFallbackVisualChange,
-        true
-      );
+    function onFallbackVisualChange() {
+      for (const state of states) queueCapture(state);
     }
-    document.fonts?.addEventListener("loadingdone", onFallbackVisualChange);
-  }
-  return {
-    setOptions(next) {
-      let changed = false;
-      for (const [key, value] of Object.entries(next)) {
-        if (typeof value === "function") continue;
-        const prev = config[key];
-        if (Array.isArray(value) && Array.isArray(prev)) {
-          if (value.length !== prev.length || value.some((item, i) => item !== prev[i])) {
+    if (!htmlInCanvas) {
+      for (const state of states) {
+        state.content.addEventListener("load", onFallbackVisualChange, true);
+        state.content.addEventListener(
+          "loadeddata",
+          onFallbackVisualChange,
+          true
+        );
+        state.content.addEventListener("input", onFallbackVisualChange, true);
+        state.content.addEventListener("change", onFallbackVisualChange, true);
+        state.content.addEventListener(
+          "transitionend",
+          onFallbackVisualChange,
+          true
+        );
+        state.content.addEventListener(
+          "animationend",
+          onFallbackVisualChange,
+          true
+        );
+      }
+      document.fonts?.addEventListener("loadingdone", onFallbackVisualChange);
+    }
+    return {
+      setOptions(next) {
+        let changed = false;
+        for (const [key, value] of Object.entries(next)) {
+          if (typeof value === "function") continue;
+          const prev = config[key];
+          if (Array.isArray(value) && Array.isArray(prev)) {
+            if (value.length !== prev.length || value.some((item, i) => item !== prev[i])) {
+              changed = true;
+              break;
+            }
+          } else if (prev !== value) {
             changed = true;
             break;
           }
-        } else if (prev !== value) {
-          changed = true;
-          break;
         }
-      }
-      Object.assign(config, next);
-      if (!changed) return;
-      syncBacking();
-      start();
-    },
-    sweep,
-    current: () => currentSlot,
-    capture: () => {
-      requestCapture(true);
-      start();
-    },
-    resize() {
-      syncCanvasSize();
-      syncBacking();
-      requestCapture();
-      start();
-    },
-    destroy() {
-      destroyed = true;
-      cancelAnimationFrame(raf);
-      window.clearTimeout(themeTimer);
-      resizeObserver.disconnect();
-      intersection.disconnect();
-      themeObserver.disconnect();
-      for (const observer of contentObservers) observer.disconnect();
-      schemeQuery.removeEventListener("change", onThemeShift);
-      motionQuery.removeEventListener("change", onMotionChange);
-      document.removeEventListener("visibilitychange", onPageVisibility);
-      if (!htmlInCanvas) {
+        Object.assign(config, next);
+        if (!changed) return;
+        syncBacking();
+        start();
+      },
+      sweep,
+      current: () => currentSlot,
+      capture: () => {
+        requestCapture(true);
+        start();
+      },
+      resize() {
+        syncCanvasSize();
+        syncBacking();
+        requestCapture();
+        start();
+      },
+      destroy() {
+        destroyed = true;
+        cancelAnimationFrame(raf);
+        window.clearTimeout(themeTimer);
+        resizeObserver.disconnect();
+        intersection.disconnect();
+        themeObserver.disconnect();
+        for (const observer of contentObservers) observer.disconnect();
+        schemeQuery.removeEventListener("change", onThemeShift);
+        motionQuery.removeEventListener("change", onMotionChange);
+        document.removeEventListener("visibilitychange", onPageVisibility);
+        if (!htmlInCanvas) {
+          for (const state of states) {
+            state.content.removeEventListener("load", onFallbackVisualChange, true);
+            state.content.removeEventListener(
+              "loadeddata",
+              onFallbackVisualChange,
+              true
+            );
+            state.content.removeEventListener(
+              "input",
+              onFallbackVisualChange,
+              true
+            );
+            state.content.removeEventListener(
+              "change",
+              onFallbackVisualChange,
+              true
+            );
+            state.content.removeEventListener(
+              "transitionend",
+              onFallbackVisualChange,
+              true
+            );
+            state.content.removeEventListener(
+              "animationend",
+              onFallbackVisualChange,
+              true
+            );
+          }
+          document.fonts?.removeEventListener(
+            "loadingdone",
+            onFallbackVisualChange
+          );
+        }
         for (const state of states) {
-          state.content.removeEventListener("load", onFallbackVisualChange, true);
-          state.content.removeEventListener(
-            "loadeddata",
-            onFallbackVisualChange,
-            true
-          );
-          state.content.removeEventListener(
-            "input",
-            onFallbackVisualChange,
-            true
-          );
-          state.content.removeEventListener(
-            "change",
-            onFallbackVisualChange,
-            true
-          );
-          state.content.removeEventListener(
-            "transitionend",
-            onFallbackVisualChange,
-            true
-          );
-          state.content.removeEventListener(
-            "animationend",
-            onFallbackVisualChange,
-            true
-          );
+          state.content.removeEventListener("scroll", onPanelScroll);
+          window.clearTimeout(state.captureTimer);
+          window.clearTimeout(state.scrollTimer);
+          gl.deleteTexture(state.texture);
+          if (htmlInCanvas) state.paintable.onpaint = null;
         }
-        document.fonts?.removeEventListener(
-          "loadingdone",
-          onFallbackVisualChange
-        );
+        gl.deleteProgram(program);
+        gl.deleteShader(vertexShader);
+        gl.deleteShader(fragmentShader);
+        gl.deleteBuffer(quad);
       }
-      for (const state of states) {
-        state.content.removeEventListener("scroll", onPanelScroll);
-        window.clearTimeout(state.captureTimer);
-        window.clearTimeout(state.scrollTimer);
-        gl.deleteTexture(state.texture);
-        if (htmlInCanvas) state.paintable.onpaint = null;
-      }
-      gl.deleteProgram(program);
-      gl.deleteShader(vertexShader);
-      gl.deleteShader(fragmentShader);
-      gl.deleteBuffer(quad);
-    }
-  };
-}
-export {
-  createAsciiSweep,
-  supportsHtmlInCanvas
-};
+    };
+  }
+  return __toCommonJS(core_exports);
+})();
