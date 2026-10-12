@@ -50,7 +50,7 @@ em { font-style: italic; }
 .intro { grid-area: intro; margin: 36px 0 0; font-size: 1rem; }
 .experience { grid-area: exp; margin-top: 56px; }
 .side { grid-area: side; border-left: 1px solid var(--line); padding-left: 40px; }
-footer { grid-area: foot; margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
+footer { grid-area: foot; margin-top: 56px; margin-bottom: 64px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
 footer p { margin: 0; }
 
 .photo {
@@ -85,6 +85,33 @@ ul.plain li { margin-bottom: 6px; overflow-wrap: anywhere; }
 /* Decode animation */
 .w { display: inline-block; overflow: hidden; vertical-align: bottom; white-space: nowrap; }
 .w.scrambling { color: var(--glyph); }
+.w.pixel { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: -0.05em; }
+.w.caret { color: var(--fg); }
+.w.pixel, .w.caret { overflow: hidden; }
+
+/* Temporary animation picker */
+.anim-picker {
+  position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%);
+  z-index: 10; display: flex; align-items: center; gap: 10px;
+  max-width: calc(100vw - 24px);
+  padding: 8px 10px 8px 16px;
+  background: var(--bg); color: var(--fg);
+  border: 1px solid var(--line); border-radius: 999px;
+  box-shadow: 0 8px 30px rgba(15, 27, 61, 0.14);
+  font-size: 0.8rem;
+}
+.anim-label { color: var(--muted); font-weight: 500; white-space: nowrap; }
+.anim-buttons { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+.anim-buttons::-webkit-scrollbar { display: none; }
+.anim-picker button {
+  font: inherit; font-weight: 500; color: var(--body); background: none;
+  border: 0; border-radius: 999px; padding: 6px 12px; cursor: pointer; white-space: nowrap;
+}
+.anim-picker button:hover { background: var(--line); }
+.anim-picker button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.anim-picker button:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+.anim-replay { font-size: 1rem !important; line-height: 1; padding: 6px 10px !important; }
+@media (max-width: 520px) { .anim-label { display: none; } .anim-picker { padding-left: 10px; } }
 
 
 @media (max-width: 860px) {
