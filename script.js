@@ -43,6 +43,34 @@ function buildStage() {
   return { stage, slots, output };
 }
 
+const loaded = (img) =>
+  img.complete ? null : new Promise((done) => { img.onload = img.onerror = done; });
+
+function loadFonts() {
+  if (!document.fonts) return null;
+  return Promise.all([document.fonts.load('400 16px Inter'), document.fonts.load('600 16px Inter'), document.fonts.load('700 16px Inter')]);
+}
+
+// Opened straight from disk, browsers treat every local image as cross-origin, so the
+// intro cannot snapshot them. Swap in inlined copies, which are always readable.
+async function loadImages() {
+  const imgs = [...page.querySelectorAll('img')];
+  if (location.protocol === 'file:') {
+    await new Promise((done) => {
+      const script = document.createElement('script');
+      script.src = 'assets/inline-images.js';
+      script.onload = script.onerror = done;
+      document.head.append(script);
+    });
+    const inline = window.INLINE_IMAGES || {};
+    imgs.forEach((img) => {
+      const data = inline[img.getAttribute('src')];
+      if (data) img.src = data;
+    });
+  }
+  return Promise.all(imgs.map(loaded));
+}
+
 async function start() {
   const { stage, slots, output } = buildStage();
   root.classList.add('stage-on');
@@ -58,13 +86,10 @@ async function start() {
   reveal();
 
   // Let fonts and images settle so the captured panels match the final page.
-  const images = [...page.querySelectorAll('img')].map((img) =>
-    img.complete ? null : new Promise((done) => { img.onload = img.onerror = done; }),
-  );
-  const assets = Promise.all([document.fonts ? document.fonts.ready : null, ...images]);
-  await Promise.race([assets, new Promise((done) => setTimeout(done, 2000))]);
+  const assets = Promise.all([loadFonts(), loadImages()]);
+  await Promise.race([assets, new Promise((done) => setTimeout(done, 1500))]);
   sweep.capture();
-  setTimeout(() => sweep.sweep(1), 300);
+  setTimeout(() => sweep.sweep(1), 120);
 }
 
 start().catch((error) => {
