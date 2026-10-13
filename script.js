@@ -1,3 +1,23 @@
+// Theme toggle. Night (Matrix) is the default; the choice is remembered per browser.
+(function () {
+  var root = document.documentElement;
+  var button = document.querySelector('.theme-toggle');
+  if (!button) return;
+  function label() {
+    var light = root.getAttribute('data-theme') === 'light';
+    button.setAttribute('aria-label', light ? 'Switch to dark mode' : 'Switch to light mode');
+  }
+  label();
+  button.addEventListener('click', function () {
+    var light = root.getAttribute('data-theme') !== 'light';
+    if (light) root.setAttribute('data-theme', 'light');
+    else root.removeAttribute('data-theme');
+    try { localStorage.setItem('theme', light ? 'light' : 'dark'); } catch (e) {}
+    label();
+    document.dispatchEvent(new Event('themechange'));
+  });
+})();
+
 // Matrix rain intro. Every visible character of the page falls down its own column,
 // cycling through glyphs, and locks into its real position. The real text stays in the
 // DOM the whole time (transparent), so the page stays readable to crawlers and
@@ -42,7 +62,21 @@
     });
   }
 
-  // One entry per visible character, with its exact box, font and color.
+  // Where the browser draws the baseline of a line, relative to that line's character boxes.
+  // A zero-size inline-block sits exactly on the baseline, so its bottom edge is the baseline.
+  function baselineOffset(node, i, charTop) {
+    var marker = document.createElement('span');
+    marker.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline';
+    var after = node.splitText(i);
+    node.parentNode.insertBefore(marker, after);
+    var offset = marker.getBoundingClientRect().bottom - charTop;
+    marker.remove();
+    node.appendData(after.nodeValue);
+    after.remove();
+    return offset;
+  }
+
+  // One entry per visible character, with its exact box, baseline, font and color.
   function measure(blocks) {
     var vh = window.innerHeight;
     var range = document.createRange();
@@ -50,13 +84,15 @@
     var chars = [];
     blocks.forEach(function (block) {
       var walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+      var nodes = [];
       var node;
-      while ((node = walker.nextNode())) {
+      while ((node = walker.nextNode())) nodes.push(node);
+      nodes.forEach(function (node) {
         var parent = node.parentElement;
         var info = styles.get(parent);
         if (!info) {
           var s = getComputedStyle(parent);
-          info = { font: s.fontStyle + ' ' + s.fontWeight + ' ' + s.fontSize + ' ' + s.fontFamily, color: s.color };
+          info = { font: s.fontStyle + ' ' + s.fontWeight + ' ' + s.fontSize + ' ' + s.fontFamily, color: s.color, offset: null };
           styles.set(parent, info);
         }
         var text = node.nodeValue;
@@ -66,9 +102,13 @@
           range.setEnd(node, i + 1);
           var r = range.getBoundingClientRect();
           if (!r.width || r.bottom < 0 || r.top > vh) continue;
-          chars.push({ ch: text[i], x: r.left, top: r.top, h: r.height, font: info.font, color: info.color });
+          if (info.offset === null) {
+            info.offset = baselineOffset(node, i, r.top);
+            text = node.nodeValue;
+          }
+          chars.push({ ch: text[i], x: r.left, top: r.top, h: r.height, base: r.top + info.offset, font: info.font, color: info.color });
         }
-      }
+      });
     });
     return chars;
   }
@@ -77,8 +117,12 @@
     var c = document.createElement('canvas');
     c.className = 'rain';
     c.setAttribute('aria-hidden', 'true');
-    c.width = Math.round(window.innerWidth * dpr);
-    c.height = Math.round(window.innerHeight * dpr);
+    // Size to the layout viewport (excludes the scrollbar), or glyphs drift sideways.
+    var w = document.documentElement.clientWidth, h = document.documentElement.clientHeight;
+    c.width = Math.round(w * dpr);
+    c.height = Math.round(h * dpr);
+    c.style.width = w + 'px';
+    c.style.height = h + 'px';
     document.body.appendChild(c);
     var ctx = c.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -101,18 +145,8 @@
     var landed = makeCanvas(dpr);  // settled characters, drawn once each
     var rain = makeCanvas(dpr);    // falling heads and trails, redrawn every frame
 
-    // Place glyphs on the same baseline the browser uses for the real text.
-    var metrics = new Map();
     chars.sort(function (a, b) { return a.font < b.font ? -1 : a.font > b.font ? 1 : 0; });
     chars.forEach(function (c) {
-      var m = metrics.get(c.font);
-      if (!m) {
-        landed.ctx.font = c.font;
-        var t = landed.ctx.measureText('Hg');
-        m = { ascent: t.fontBoundingBoxAscent || c.h * 0.8, descent: t.fontBoundingBoxDescent || c.h * 0.2 };
-        metrics.set(c.font, m);
-      }
-      c.base = c.top + m.ascent + (c.h - m.ascent - m.descent) / 2;
       c.cell = Math.max(c.h, 10);
       c.delay = Math.random() * DELAY;
       c.stepMs = (c.cell / rand(SPEED[0], SPEED[1])) * 1000;
@@ -135,7 +169,7 @@
     function draw(now) {
       var t = now - t0;
       var ctx = rain.ctx;
-      ctx.clearRect(0, 0, window.innerWidth, vh);
+      ctx.clearRect(0, 0, document.documentElement.clientWidth, vh);
       var font = '';
       var active = 0;
 
@@ -209,17 +243,17 @@
       window.removeEventListener('scroll', finish);
       window.removeEventListener('resize', finish);
       document.removeEventListener('visibilitychange', finish);
+      document.removeEventListener('themechange', finish);
       blocks.forEach(function (b) { b.classList.remove('rain-hide'); });
-      [landed.el, rain.el].forEach(function (el) {
-        el.style.opacity = '0';
-        setTimeout(function () { el.remove(); }, 400);
-      });
+      landed.el.remove();
+      rain.el.remove();
     }
 
     // Positions are measured once, so any scroll or resize ends the intro early.
     window.addEventListener('scroll', finish, { passive: true });
     window.addEventListener('resize', finish);
     document.addEventListener('visibilitychange', finish);
+    document.addEventListener('themechange', finish);
 
     // Safety net: if frames get throttled, still end on time instead of leaving text hidden.
     var lastLand = Math.max.apply(null, chars.map(function (c) { return c.landAt; }));
