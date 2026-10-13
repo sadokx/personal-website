@@ -12,7 +12,8 @@
   --muted: #7a819b;
   --line: #e4e6ee;
   --glyph: #8a93b5;
-  --glow: #2f5bff;
+  --rain-head: #2f5bff;
+  --rain-tail: #6f8cff;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -22,7 +23,8 @@
     --muted: #8d94b0;
     --line: #232944;
     --glyph: #5f6a99;
-    --glow: #7aa2ff;
+    --rain-head: #eef3ff;
+    --rain-tail: #5b7cff;
   }
 }
 * { box-sizing: border-box; }
@@ -105,7 +107,8 @@ ul.plain li { margin-bottom: 6px; overflow-wrap: anywhere; }
   .photo { width: 72px; height: 72px; border-radius: 18px; }
 }
 
-/* Stage for the ASCII sweep intro. The page scrolls inside it. */
-.js:not(.ready) .page { visibility: hidden; }
-html.stage-on, html.stage-on body { height: 100%; overflow: hidden; }
-.stage { position: fixed; inset: 0; }
+/* Matrix rain intro: real text stays in the DOM but is transparent while a canvas rains it into place. */
+.js:not(.rain-ready) .page { visibility: hidden; }
+.rain-hide, .rain-hide * { color: transparent !important; text-decoration-color: transparent !important; }
+li.rain-hide::marker { color: var(--body) !important; }
+.rain { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; transition: opacity 0.3s ease; }
