@@ -6,28 +6,24 @@
   src: url("assets/fonts/inter-latin.woff2") format("woff2");
 }
 :root {
-  /* Night (default): Matrix palette */
+  /* Night (default): Matrix black with white text */
   --bg: #0d0208;
-  --fg: #00ff41;
-  --body: #9ef5b4;
-  --muted: #3fa85a;
-  --line: #10391b;
-  --chip-bg: #003b00;
-  --chip-fg: #00ff41;
-  --rain-head: #e8ffe9;
-  --rain-tail: #00ff41;
+  --fg: #ffffff;
+  --body: #d5d9d6;
+  --muted: #8a948d;
+  --line: #1f2621;
+  --chip-bg: #1c241f;
+  --chip-fg: #ffffff;
   color-scheme: dark;
 }
 :root[data-theme="light"] {
   --bg: #ffffff;
-  --fg: #0d2b14;
-  --body: #2f4a36;
-  --muted: #5f7a66;
-  --line: #e1ebe3;
-  --chip-bg: #0d2b14;
+  --fg: #111111;
+  --body: #3d3f3e;
+  --muted: #767a78;
+  --line: #e6e8e7;
+  --chip-bg: #111111;
   --chip-fg: #ffffff;
-  --rain-head: #008f11;
-  --rain-tail: #2fbf55;
   color-scheme: light;
 }
 * { box-sizing: border-box; }
@@ -111,11 +107,22 @@ ul.plain li { margin-bottom: 6px; overflow-wrap: anywhere; }
   .photo { width: 72px; height: 72px; border-radius: 18px; }
 }
 
-/* Matrix rain intro: real text stays in the DOM but is transparent while a canvas rains it into place. */
-.js:not(.rain-ready) .page { visibility: hidden; }
-.rain-hide, .rain-hide * { color: transparent !important; text-decoration-color: transparent !important; }
-li.rain-hide::marker { color: var(--body) !important; }
-.rain { position: fixed; top: 0; left: 0; pointer-events: none; z-index: 5; }
+/* Matrix intro: full-screen digital rain, then the page fades in and the rain settles behind it. */
+.matrix-rain {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  border: 0; z-index: 20; pointer-events: none; background: #000;
+  transition: opacity 1.4s ease;
+}
+.matrix-rain.ambient { z-index: -1; opacity: 0.16; }
+.matrix-rain.gone { opacity: 0; }
+.js .page { transition: opacity 1s ease 0.15s; }
+.js:not(.intro-done) .page { opacity: 0; }
+.js .photo, .js .logo, .js .award img {
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.7s ease;
+}
+.js:not(.intro-done) .photo,
+.js:not(.intro-done) .logo,
+.js:not(.intro-done) .award img { opacity: 0; transform: scale(0.88); filter: blur(8px); }
 
 /* Theme toggle */
 .theme-toggle {
