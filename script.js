@@ -296,8 +296,8 @@
       finished = true;
       cancelAnimationFrame(raf);
       clearTimeout(timer);
-      window.removeEventListener('scroll', finish);
-      window.removeEventListener('resize', finish);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
       document.removeEventListener('visibilitychange', finish);
       document.removeEventListener('themechange', finish);
       blocks.forEach(function (b) { b.classList.remove('rain-hide'); });
@@ -306,9 +306,18 @@
       landed.el.remove();
     }
 
-    // Positions are measured once, so any scroll, resize or theme change ends the intro early.
-    window.addEventListener('scroll', finish, { passive: true });
-    window.addEventListener('resize', finish);
+    // Positions are measured once, so a real scroll, a width change or a theme change ends the
+    // intro early. Phones fire small scroll and resize events on their own (pull-to-refresh
+    // bounce, the address bar sliding in and out), which must not count.
+    var startY = window.scrollY;
+    function onScroll() {
+      if (window.scrollY >= 0 && Math.abs(window.scrollY - startY) > 12) finish();
+    }
+    function onResize() {
+      if (document.documentElement.clientWidth !== W) finish();
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize);
     document.addEventListener('visibilitychange', finish);
     document.addEventListener('themechange', finish);
     // Safety net: if frames get throttled, still end on time.
